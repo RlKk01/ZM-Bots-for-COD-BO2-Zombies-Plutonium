@@ -113,6 +113,8 @@ bot_set_skill()
 	setdvar("bot_MeleeDist", "70");
 	setdvar("bot_YawSpeed", "4");
 	setdvar("bot_SprintDistance", "256");
+	setDvar("g_playerCollision", "nobody");
+	setDvar("g_playerEjection", "nobody");
 }
 
 // New function to handle bot stance actions
