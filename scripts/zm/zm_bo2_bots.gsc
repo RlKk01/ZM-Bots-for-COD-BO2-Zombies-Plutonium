@@ -405,20 +405,20 @@ bot_teleport_think()
 	
 	if(Distance(self.origin, players[0].origin) > 12500 && players[0] IsOnGround())
 	{
-		self SetOrigin(players[0].origin + (0,50,0));
+		self SetOrigin(players[0].origin + (0,150,0));
 	}
 	else if (getDvar("mapname") == "zm_highrise")
 	{
 		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,50,0));
+			self SetOrigin(players[0].origin + (0,150,0));
 		}
 	}
 	else if (getDvar("mapname") == "zm_buried")
 	{
 		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,50,0));
+			self SetOrigin(players[0].origin + (0,150,0));
 		}
 	}
 }
