@@ -436,8 +436,7 @@ bot_update_aim(frames) //checked matches cerberus output
 
 	//Snipers
 	has_sniper = 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("barretm82_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("as50_zm");
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("barretm82_zm");
 	//
 
 	//Shotguns
@@ -454,15 +453,12 @@ bot_update_aim(frames) //checked matches cerberus output
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("c96_zm");
 	//
 
-	// Reimagined Mod Weapons
-	has_titus6 = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("titus6_zm");
-
 	if (!threat_is_player())
 	{
         centroid = ent getcentroid();
 		height = centroid[2] - prediction[2];
 		
-		if (has_wonder_staffs || has_blundersplat || has_slowgun || has_slipgun || has_raygun_mk2 || has_titus6 || has_sniper)
+		if (has_wonder_staffs || has_blundersplat || has_slowgun || has_slipgun || has_raygun_mk2 || has_sniper)
 		head_offset = 10;
 		
 		else if (has_blundergat || has_shotgun)

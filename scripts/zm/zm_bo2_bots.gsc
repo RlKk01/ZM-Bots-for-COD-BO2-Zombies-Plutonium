@@ -23,7 +23,7 @@ bot_spawn()
 {
     self bot_spawn_init();
     self thread bot_main();
-    //self thread bot_check_player_blocking();
+    self thread bot_check_player_blocking();
 }
 
 array_combine(array1, array2)
@@ -113,8 +113,6 @@ bot_set_skill()
 	setdvar("bot_MeleeDist", "70");
 	setdvar("bot_YawSpeed", "4");
 	setdvar("bot_SprintDistance", "256");
-	setdvar("g_playerCollision", "nobody");
-	setdvar("g_playerEjection", "nobody");
 }
 
 // New function to handle bot stance actions
@@ -1125,12 +1123,12 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     
     // Define weapon tiers for better decision making
     tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "raygun_mark2", "ray_gun");
-	tier2_weapons = array("titus6", "usrpg", "srm1216", "svu", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
-	tier3_weapons = array("saiga12", "as50", "barretm82", "lsat", "hamr", "mk48", "rpd", "mg08", "rnma");
-    tier4_weapons = array("dsr50", "scar", "hk416", "an94", "tar21", "galil", "ak47", "mp44", "peacekeeper", "evoskorpion", "pdw57", "mp7", "vector", "thompson", "fivesevendw");
-    tier5_weapons = array("ksg", "870mcs", "sa58", "type95", "xm8", "sig556", "m16", "insas", "mp5k", "ak74u_extclip", "mp40", "beretta93r_extclip");
-    tier6_weapons = array("fnfal", "qcw05", "ak74u", "beretta93r", "fiveseven", "judge", "python");
-	tier7_weapons = array("m32", "rottweil72", "metalstorm_mms", "ballista", "saritch", "m14", "uzi", "m1911", "c96", "knife_ballistic");
+	tier2_weapons = array("usrpg", "srm1216", "svu", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
+	tier3_weapons = array("saiga12", "barretm82", "lsat", "hamr", "rpd", "mg08", "rnma");
+    tier4_weapons = array("dsr50", "scar", "hk416", "an94", "tar21", "galil", "ak47", "mp44", "evoskorpion", "pdw57", "thompson", "fivesevendw");
+    tier5_weapons = array("ksg", "870mcs", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip");
+    tier6_weapons = array("fnfal", "qcw05", "ak74u", "mp40", "kard", "beretta93r", "fiveseven", "judge", "python");
+	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "uzi", "m1911", "c96", "knife_ballistic");
     
     // Track if current weapon is in specific tier
     currentIsTier1 = false;
@@ -1422,6 +1420,7 @@ bot_buy_wallbuy()
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ksg_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("srm1216_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("mp40_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("mp40_stalker_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ak74u_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ak74u_extclip_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("thompson_zm") || 
@@ -1451,16 +1450,6 @@ bot_buy_wallbuy()
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("python_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("rnma_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("fivesevendw_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("metalstorm_mms_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("titus6_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("insas_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("vector_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("mp7_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("peacekeeper_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("sig556_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("sa58_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("mk48_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("as50_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ray_gun_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("raygun_mark2_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slipgun_zm") || 
@@ -1954,6 +1943,30 @@ bot_update_wander()
         self AddGoal(player.origin, 100, 1, "wander");
         return;
     }
+	else if (getDvar("mapname") == "zm_highrise")
+	{
+		if(distance(self.origin, player.origin) > 400)
+		{
+			self AddGoal(player.origin, 100, 1, "wander");
+			return;
+		}
+	}
+	else if (getDvar("mapname") == "zm_buried")
+	{
+		if(distance(self.origin, player.origin) > 800)
+		{
+			self AddGoal(player.origin, 100, 1, "wander");
+			return;
+		}
+	}
+	else if (getDvar("mapname") == "zm_prison")
+	{
+		if(distance(self.origin, player.origin) > 800)
+		{
+			self AddGoal(player.origin, 100, 1, "wander");
+			return;
+		}
+	}
 }
 
 bot_update_lookat()
