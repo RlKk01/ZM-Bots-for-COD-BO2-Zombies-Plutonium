@@ -402,23 +402,26 @@ bot_teleport_think()
 	level endon("end_game");
 	
 	players = get_players();
-	
-	if(Distance(self.origin, players[0].origin) > 12500 && players[0] IsOnGround())
+
+	if (getDvar("mapname") == "zm_highrise")
 	{
-		self SetOrigin(players[0].origin + (0,150,0));
-	}
-	else if (getDvar("mapname") == "zm_highrise")
-	{
-		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
+		if(Distance(self.origin, players[0].origin) > 2000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,150,0));
+			self SetOrigin(players[0].origin + (0,75,0));
 		}
 	}
 	else if (getDvar("mapname") == "zm_buried")
 	{
 		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,150,0));
+			self SetOrigin(players[0].origin + (0,75,0));
+		}
+	}
+	else if (getDvar("mapname") == "zm_prison")
+	{
+		if(Distance(self.origin, players[0].origin) > 12500 && players[0] IsOnGround())
+		{
+			self SetOrigin(players[0].origin + (0,75,0));
 		}
 	}
 }
