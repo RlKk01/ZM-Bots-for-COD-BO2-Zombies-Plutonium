@@ -226,6 +226,7 @@ bot_main()
 	self thread bot_damage_think();
 	self thread bot_give_ammo();
 	self thread bot_reset_flee_goal();
+	self thread bot_update_wander();
 	
 	for (;;)
 	{
@@ -244,12 +245,14 @@ bot_main()
 
 				if(self hasgoal("boxGrab"))
 					self cancelgoal("boxGrab");
+				
+				if(self hasgoal("wander"))
+					self cancelgoal("wander");
 
-				wait 0.05;
+				wait 0.01;
 				continue;
 			}
 			self bot_combat_think(damage, attacker, direction);
-			self bot_update_wander();
 			self bot_update_lookat();
 			self bot_stand_fix();
 			self bot_teleport_think();
@@ -726,6 +729,7 @@ bot_buy_box()
 						// Commit to grab
 						self cancelgoal("boxBuy");
 						self cancelgoal("boxGrab");
+						self cancelgoal("wander");
 
 						self lookat(activeBox.origin);
 						wait 0.2;
@@ -1046,6 +1050,7 @@ bot_monitor_box_animation(box)
 		// Commit to grab (stop movement/goals)
 		self cancelgoal("boxBuy");
 		self cancelgoal("boxGrab");
+		self cancelgoal("wander");
 
 		// Face the box directly (no jitter now)
 		self lookat(box.origin);
@@ -1211,7 +1216,8 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     if(IsSubStr(boxWeapon, "time_bomb") || 
 	   IsSubStr(boxWeapon, "emp_grenade") || 
 	   IsSubStr(boxWeapon, "cymbal_monkey") || 
-	   IsSubStr(boxWeapon, "knife_ballistic"))
+	   IsSubStr(boxWeapon, "knife_ballistic") || 
+	   IsSubStr(boxWeapon, "m32"))
     {
         return (randomfloat(1) < 0); // 0% chance
     }
@@ -1909,41 +1915,55 @@ bot_perks_origins()
 
 bot_update_wander()
 {
-    players = get_players();
-    player = players[0];
+	self endon("death");
+	self endon("disconnect");
+	level endon("game_ended");
 
-    location = get_random_walkable_location(player.origin, 1000, self);
-
-    self AddGoal(location, 100, 1, "wander");
-
-    if(distance(self.origin, player.origin) > 1000)
-    {
-        self AddGoal(player.origin, 100, 1, "wander");
-        return;
-    }
-	else if (getDvar("mapname") == "zm_highrise")
+	for(;;)
 	{
-		if(distance(self.origin, player.origin) > 400)
+		if(self isremotecontrolling())
+		{
+			continue;
+		}
+
+		players = get_players();
+		player = players[0];
+		location = get_random_walkable_location(player.origin, 1000, self);
+
+		if(distance(self.origin, player.origin) > 1000)
 		{
 			self AddGoal(player.origin, 100, 1, "wander");
-			return;
+			continue;
 		}
-	}
-	else if (getDvar("mapname") == "zm_buried")
-	{
-		if(distance(self.origin, player.origin) > 800)
+		else if (getDvar("mapname") == "zm_highrise")
 		{
-			self AddGoal(player.origin, 100, 1, "wander");
-			return;
+			if(distance(self.origin, player.origin) > 800)
+			{
+				self AddGoal(player.origin, 100, 1, "wander");
+				continue;
+			}
 		}
-	}
-	else if (getDvar("mapname") == "zm_prison")
-	{
-		if(distance(self.origin, player.origin) > 800)
+		else if (getDvar("mapname") == "zm_buried")
 		{
-			self AddGoal(player.origin, 100, 1, "wander");
-			return;
+			if(distance(self.origin, player.origin) > 800)
+			{
+				self AddGoal(player.origin, 100, 1, "wander");
+				continue;
+			}
 		}
+		else if (getDvar("mapname") == "zm_prison")
+		{
+			if(distance(self.origin, player.origin) > 800)
+			{
+				self AddGoal(player.origin, 100, 1, "wander");
+				continue;
+			}
+		}
+		if(isDefined(location))
+		{
+			self AddGoal(location, 100, 1, "wander");
+		}
+		wait 0.01;
 	}
 }
 
