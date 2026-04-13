@@ -648,7 +648,7 @@ bot_buy_box()
 			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 300000))
 				return;
 		}
-		else if (level.round_number <= 30)
+		else
 		{
 			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 600000))
 				return;
