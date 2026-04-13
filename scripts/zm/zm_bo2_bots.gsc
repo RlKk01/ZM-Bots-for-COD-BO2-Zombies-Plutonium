@@ -633,14 +633,9 @@ bot_buy_box()
             return;
         }
 		
-		if (level.round_number <= 1)
+		if (level.round_number <= 8)
 		{
 			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 15000))
-				return;
-		}
-		else if (level.round_number <= 8)
-		{
-			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 45000))
 				return;
 		}
 		else if (level.round_number <= 15)
@@ -1323,12 +1318,17 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
             // 20% chance to swap between tier 2 weapons for variety
             return (randomfloat(1) < 0.2);
         }
-        else if(boxIsTier3 || boxIsTier4 || boxIsTier5 || boxIsTier6)
+        else if(boxIsTier3)
         {
-            // Never downgrade from tier 2
+            // 70% chance to downgrade from tier 2 for variety
+            return (randomfloat(1) < 0.7);
+        }
+        else if(boxIsTier4 || boxIsTier5 || boxIsTier6 || boxIsTier7)
+        {
+            // Never downgrade from tier 2 and tier 3
             return (randomfloat(1) < 0);
         }
-        return (randomfloat(1) < 0);
+		return (randomfloat(1) < 0);
     }
     
     // Have tier 3 weapon already
@@ -1336,8 +1336,8 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     {
         if(boxIsTier2)
         {
-            // Always upgrade to tier 2
-            return true;
+            // 90% chance to upgrade to tier 2
+            return (randomfloat(1) < 0.9);
         }
         else if(boxIsTier3)
         {
