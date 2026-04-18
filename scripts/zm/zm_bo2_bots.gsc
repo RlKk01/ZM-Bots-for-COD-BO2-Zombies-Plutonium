@@ -1986,7 +1986,7 @@ bot_update_wander()
 		{
 			self AddGoal(location, 100, 1, "wander");
 		}
-		wait 0.1;
+		wait 0.2;
 	}
 }
 
