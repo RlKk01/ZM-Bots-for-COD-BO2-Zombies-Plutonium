@@ -635,17 +635,17 @@ bot_buy_box()
 		
 		if (level.round_number <= 8)
 		{
-			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 15000))
+			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 90000))
 				return;
 		}
 		else if (level.round_number <= 15)
 		{
-			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 90000))
+			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 120000))
 				return;
 		}
 		else if (level.round_number <= 25)
 		{
-			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 150000))
+			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 180000))
 				return;
 		}
 		else
