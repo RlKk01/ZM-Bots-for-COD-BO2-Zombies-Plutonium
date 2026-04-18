@@ -21,13 +21,22 @@ bot_combat_think(damage, attacker, direction)
 		//LOOKING FOR ANOTHER ALTERNATIVE IF DOORS ARE CLOSED AND THE BOT CAN NOT REACH SAID PATH.
 		if(Distance(self.origin, self.bot.threat.position) <= 75 || isdefined(damage))
 		{
-			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
+			if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
+			{
+				self.bot.next_flee_scan = getTime() + 500;
+
+				nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
+			}
+			else
+			{
+				nodes = [];
+			}
 			nearest = bot_nearest_node(self.origin);
 			if (isDefined(nearest) && !self hasgoal("flee"))
 			{
 				foreach (node in nodes)
 				{
-					if (!nodesvisible(nearest, node) && FindPath(self.origin, node.origin, undefined, 0, 1))
+					if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
 					{
 						self addgoal(node.origin, 24, 4, "flee");
 						break;
@@ -56,17 +65,30 @@ bot_combat_think(damage, attacker, direction)
 		if(!isDefined(level.mystery_box_teddy_locations))
 			level.mystery_box_teddy_locations = [];
 		
-		// Safe door opening - prevents multiple bots from trying to open the same door
-		self bot_safely_interact_with_doors();
-		
-		// Mystery box safety check - prevents using teddy bear boxes
-		self bot_safely_use_mystery_box();
+		if (!isDefined(self.bot.next_interact_time) || getTime() > self.bot.next_interact_time)
+		{
+			self.bot.next_interact_time = getTime() + 1000; // once per second
+	
+			self bot_safely_interact_with_doors();
+			self bot_safely_use_mystery_box();
+		}
 		
 		if(is_true(level.using_bot_revive_logic))
 		{
 			self bot_revive_teammates();
 		}
-		wait 0.05;
+		wait 0.1;
+	}
+}
+
+init_door_triggers()
+{
+	if (!isDefined(level.cached_door_triggers))
+	{
+		triggers = getEntArray("zombie_door", "targetname");
+		triggers = array_combine(triggers, getEntArray("zombie_debris", "targetname"));
+		triggers = array_combine(triggers, getEntArray("zombie_airlock_buy", "targetname"));
+		level.cached_door_triggers = triggers;
 	}
 }
 
@@ -83,10 +105,8 @@ bot_safely_interact_with_doors()
 	if(is_true(level.door_being_opened))
 		return;
 
-	// Check if we're near a door
-	door_triggers = getEntArray("zombie_door", "targetname");
-	door_triggers = array_combine(door_triggers, getEntArray("zombie_debris", "targetname"));
-	door_triggers = array_combine(door_triggers, getEntArray("zombie_airlock_buy", "targetname"));
+	init_door_triggers();
+	door_triggers = level.cached_door_triggers;
 	
 	closest_dist = 999999;
 	closest_door = undefined;
@@ -122,11 +142,20 @@ bot_safely_interact_with_doors()
 	self.bot.last_door_use_time = getTime();
 }
 
+init_box_triggers()
+{
+	if (!isDefined(level.cached_box_triggers))
+	{
+		level.cached_box_triggers = getEntArray("treasure_chest_use", "targetname");
+	}
+}
+
 // Prevents bots from using mystery boxes that have teddy bears
 bot_safely_use_mystery_box()
 {
 	// Find closest mystery box
-	box_triggers = getEntArray("treasure_chest_use", "targetname");
+	init_box_triggers();
+	box_triggers = level.cached_box_triggers;
 	
 	closest_dist = 999999;
 	closest_box = undefined;
@@ -159,7 +188,11 @@ bot_safely_use_mystery_box()
 		if (!isDefined(self.bot.watching_box) || !self.bot.watching_box)
 		{
 			self.bot.watching_box = true;
-			self thread watch_for_box_teddy(closest_box);
+			if (!isDefined(self.bot.watching_box_thread))
+			{
+				self.bot.watching_box_thread = true;
+				self thread watch_for_box_teddy(closest_box);
+			}
 		}
 		
 		if (isDefined(self.bot.last_box_use_time))
@@ -194,6 +227,8 @@ watch_for_box_teddy(box)
 
 	// IMPORTANT: release the lock so it can run again later
 	self.bot.watching_box = false;
+	
+	self.bot.watching_box_thread = undefined;
 }
 
 // Check if an array contains a specific value (origin)
@@ -238,6 +273,18 @@ array_combine(array1, array2)
 bot_combat_main() //checked partially changed to match cerberus output changed at own discretion
 {
 	weapon = self getcurrentweapon();
+	
+	// Force bot to finish reloading until clip is full
+	if (self isreloading())
+	{
+		clip = self getweaponammoclip(weapon);
+		max = weaponclipsize(weapon);
+
+		if (clip < max)
+		{
+			self.bot.reload_until_full = true;
+		}
+	}
 	currentammo = self getweaponammoclip(weapon) + self getweaponammostock(weapon);
 	if (!currentammo)
 	{
@@ -270,6 +317,22 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 		self.bot.threat.aim_target = self bot_update_aim(frames);
 		self.bot.threat.position = self.bot.threat.entity.origin;
 		self bot_update_lookat(self.bot.threat.aim_target, frac);
+	}
+	if (isDefined(self.bot.reload_until_full) && self.bot.reload_until_full)
+	{
+		clip = self getweaponammoclip(weapon);
+		max = weaponclipsize(weapon);
+
+		// If still not full, keep blocking attack
+		if (clip < max)
+		{
+			self allowattack(0);
+			return;
+		}
+		else
+		{
+			self.bot.reload_until_full = undefined;
+		}
 	}
 	if (self bot_on_target(self.bot.threat.aim_target, 60))
 	{
@@ -443,13 +506,15 @@ bot_update_aim(frames) //checked matches cerberus output
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_fire_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_lightning_zm");
 	//
-
+	
+	//
 	has_blundersplat = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundersplat_zm");
 	has_blundergat = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundergat_zm");
 	has_slowgun = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slowgun_zm");
 	has_slipgun = 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slipgun_zm");
 	has_raygun_mk2 = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("raygun_mark2_zm");
 	has_raygun = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ray_gun_zm");
+	//
 
 	// Normal Weapons
 

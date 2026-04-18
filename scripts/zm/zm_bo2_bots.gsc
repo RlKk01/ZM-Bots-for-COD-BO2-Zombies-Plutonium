@@ -249,7 +249,7 @@ bot_main()
 				if(self hasgoal("wander"))
 					self cancelgoal("wander");
 
-				wait 0.01;
+				wait 0.1;
 				continue;
 			}
 			self bot_combat_think(damage, attacker, direction);
@@ -1109,11 +1109,11 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     
     // Define weapon tiers for better decision making
     tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "raygun_mark2", "ray_gun");
-	tier2_weapons = array("usrpg", "srm1216", "svu", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
-	tier3_weapons = array("lsat", "hamr", "rpd", "mg08");
-    tier4_weapons = array("saiga12", "scar", "hk416", "an94", "tar21", "galil", "ak47", "mp44", "evoskorpion", "pdw57", "thompson", "fivesevendw", "rnma");
-    tier5_weapons = array("ksg", "870mcs", "dsr50", "barretm82", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip");
-    tier6_weapons = array("fnfal", "qcw05", "ak74u", "mp40", "kard", "beretta93r", "fiveseven", "judge", "python");
+	tier2_weapons = array("usrpg", "svu", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
+	tier3_weapons = array("870mcs", "lsat", "hamr", "rpd", "mg08");
+    tier4_weapons = array("ksg", "scar", "hk416", "an94", "tar21", "galil", "ak47", "mp44", "evoskorpion", "pdw57", "thompson", "fivesevendw", "judge");
+    tier5_weapons = array("dsr50", "srm1216", "barretm82", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip", "rnma");
+    tier6_weapons = array("saiga12", "fnfal", "qcw05", "ak74u", "mp40", "kard", "beretta93r", "fiveseven", "python");
 	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "uzi", "m1911", "c96", "knife_ballistic");
     
     // Track if current weapon is in specific tier
@@ -1211,10 +1211,7 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     if(IsSubStr(boxWeapon, "time_bomb") || 
 	   IsSubStr(boxWeapon, "emp_grenade") || 
 	   IsSubStr(boxWeapon, "cymbal_monkey") || 
-	   IsSubStr(boxWeapon, "knife_ballistic") || 
-	   IsSubStr(boxWeapon, "python") || 
-	   IsSubStr(boxWeapon, "judge") || 
-	   IsSubStr(boxWeapon, "m32"))
+	   IsSubStr(boxWeapon, "knife_ballistic"))
     {
         return (randomfloat(1) < 0); // 0% chance
     }
@@ -1317,20 +1314,24 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     {
         if(boxIsTier2)
         {
-            // 20% chance to swap between tier 2 weapons for variety
-            return (randomfloat(1) < 0.2);
+            // 50% chance to swap between tier 2 weapons for variety
+            return (randomfloat(1) < 0.5);
         }
         else if(boxIsTier3)
         {
-            // 70% chance to downgrade from tier 2 for variety
+            // 70% chance to downgrade from the tier for variety
             return (randomfloat(1) < 0.7);
         }
-        else if(boxIsTier4 || boxIsTier5 || boxIsTier6 || boxIsTier7)
+        else if(boxIsTier4)
         {
-            // Never downgrade from tier 2 and tier 3
+            // 60% chance to downgrade from the tier for variety
+            return (randomfloat(1) < 0.6);
+        }
+        else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
+        {
+            // Don't downgrade to these tiers
             return (randomfloat(1) < 0);
         }
-		return (randomfloat(1) < 0);
     }
     
     // Have tier 3 weapon already
@@ -1348,20 +1349,10 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
         }
         else if(boxIsTier4)
         {
-            // Don't downgrade
-            return (randomfloat(1) < 0);
+            // 70% chance to downgrade from tier 3 for variety
+            return (randomfloat(1) < 0.7);
         }
-		else if(boxIsTier5)
-        {
-            // Don't downgrade
-            return (randomfloat(1) < 0);
-        }
-		else if(boxIsTier6)
-        {
-            // Don't downgrade
-            return (randomfloat(1) < 0);
-        }
-		else if(boxIsTier7)
+		else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
         {
             // Don't downgrade
             return (randomfloat(1) < 0);
@@ -1373,10 +1364,10 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     {
         return true;
     }
-    // Mid rounds - prefer at least tier 3
+    // Mid rounds - prefer at least tier 4
     else if(level.round_number <= 15)
     {
-        if(boxIsTier2 || boxIsTier3)
+        if(boxIsTier2 || boxIsTier3 || boxIsTier4)
             return true;
         else
             return (randomfloat(1) < 0.5); // 50% chance for other weapons
@@ -1388,8 +1379,10 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
             return true;
         else if(boxIsTier3)
             return (randomfloat(1) < 0.7); // 70% chance for tier 3
+        else if(boxIsTier4)
+            return (randomfloat(1) < 0.6); // 60% chance for tier 4
         else
-            return (randomfloat(1) < 0.2); // 20% chance for other weapons
+            return (randomfloat(1) < 0); // 0% chance for other weapons
     }
     // Default case - 50/50 chance
     return (randomfloat(1) < 0.5);
@@ -1967,7 +1960,7 @@ bot_update_wander()
 		{
 			self AddGoal(location, 100, 1, "wander");
 		}
-		wait 0.01;
+		wait 0.1;
 	}
 }
 
