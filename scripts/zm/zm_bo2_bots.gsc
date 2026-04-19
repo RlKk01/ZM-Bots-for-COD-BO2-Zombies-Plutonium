@@ -1322,15 +1322,9 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
             // 80% chance to downgrade from the tier for variety
             return (randomfloat(1) < 0.8);
         }
-        else if(boxIsTier4)
+        else if(boxIsTier4 || boxIsTier5 || boxIsTier6 || boxIsTier7)
         {
-            // 60% chance to downgrade from the tier for variety
-            return (randomfloat(1) < 0.6);
-        }
-        else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
-        {
-            // Don't downgrade to these tiers
-            return false;
+			return false; // Don't downgrade
         }
     }
     
@@ -1349,13 +1343,12 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
         }
         else if(boxIsTier4)
         {
-            // 70% chance to downgrade from tier 3 for variety
-            return (randomfloat(1) < 0.7);
+            // 50% chance to downgrade from tier 3 for variety
+            return (randomfloat(1) < 0.5);
         }
 		else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
         {
-            // Don't downgrade
-            return false;
+            return false; // Don't downgrade
         }
     }
 	
@@ -1364,13 +1357,13 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     {
         if(boxIsTier2)
         {
-            // 90% chance to upgrade to tier 2
-            return (randomfloat(1) < 0.9);
+            // 100% chance to upgrade to tier 2
+            return true;
         }
         else if(boxIsTier3)
         {
-            // 90% chance to upgrade to tier 3
-            return (randomfloat(1) < 0.9);
+            // 100% chance to upgrade to tier 3
+            return true;
         }
         else if(boxIsTier4)
         {
@@ -1379,8 +1372,7 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
         }
 		else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
         {
-            // Don't downgrade
-            return false;
+           return false; // Don't downgrade
         }
     }
     
@@ -1404,11 +1396,10 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
         if(boxIsTier2 || boxIsTier3)
             return true;
 		
-        else if(boxIsTier4)
-            return (randomfloat(1) < 0.1); // 10% chance for tier 4
-		
-        else if(boxIsTier5 || boxIsTier6 || boxIsTier7)
-            return false;
+        else if(boxIsTier4 || boxIsTier5 || boxIsTier6 || boxIsTier7)
+        {
+			return false; // Don't downgrade
+        }
     }
     // Default case - 50/50 chance
     return (randomfloat(1) < 0.5);
