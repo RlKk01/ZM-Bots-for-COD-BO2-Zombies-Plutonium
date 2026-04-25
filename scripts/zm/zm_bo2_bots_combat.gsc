@@ -1,6 +1,8 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
 #include maps\mp\zombies\_zm_utility;
+#include maps\mp\zombies\_zm_weapons;
+
 #include scripts\zm\zm_bo2_bots;
 #include scripts\zm\zm_bo2_bots_utility;
 
@@ -46,9 +48,12 @@ bot_combat_think(damage, attacker, direction)
 		}
 		if(self GetCurrentWeapon() == "none")
 			return;
+		
 		sight = self bot_best_enemy();
+		
 		if(!isdefined(self.bot.threat.entity))
 			return;
+		
 		if (threat_dead())
 		{
 			self bot_combat_dead();
@@ -77,7 +82,7 @@ bot_combat_think(damage, attacker, direction)
 		{
 			self bot_revive_teammates();
 		}
-		wait 0.1;
+		wait 0.5;
 	}
 }
 
@@ -334,7 +339,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 			self.bot.reload_until_full = undefined;
 		}
 	}
-	if (self bot_on_target(self.bot.threat.aim_target, 60))
+	if (self bot_on_target(self.bot.threat.aim_target, 100))
 	{
 		self allowattack(1);
 	}
@@ -475,6 +480,8 @@ bot_update_lookat(origin, frac) //checked matches cerberus output
 bot_update_aim(frames) //checked matches cerberus output
 {
 	ent = self.bot.threat.entity;
+	
+	weapon = self getcurrentweapon();
 
     if (!isDefined(ent.origin))
         return self.origin;
@@ -497,17 +504,7 @@ bot_update_aim(frames) //checked matches cerberus output
     vel = ent getvelocity();
     prediction += vel * 0.07;
 
-	// Wonder Weapons
-
-	//Wonder Staffs
-	has_wonder_staffs = 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_water_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_air_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_fire_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_lightning_zm");
-	//
-	
-	//
+	//Wonder Weapons
 	has_blundersplat = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundersplat_zm");
 	has_blundergat = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundergat_zm");
 	has_slowgun = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slowgun_zm");
@@ -516,7 +513,13 @@ bot_update_aim(frames) //checked matches cerberus output
 	has_raygun = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ray_gun_zm");
 	//
 
-	// Normal Weapons
+	//Wonder Staffs
+	has_wonder_staffs = 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_water_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_air_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_fire_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_lightning_zm");
+	//
 
 	//Explosives Weapons
 	has_explosive_weapon = 
@@ -534,13 +537,39 @@ bot_update_aim(frames) //checked matches cerberus output
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("srm1216_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ksg_zm") || 
 	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("saiga12_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("870mcs_zm");
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("870mcs_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("rottweil72_zm");
 	//
-
-	//Pistols
-	has_primary_pistol = 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("m1911_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("c96_zm");
+	
+	//Assault Rifles
+	has_assault_rifle = 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("type95_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("tar21_zm") || 
+	
+	weapon == "an94_zm";
+	//
+	
+	//SMGs
+	has_smg = 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("evoskorpion_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("mp5k_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ak74u_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("ak74u_extclip_zm");
+	//
+	
+	//Revolvers/Magnum
+	has_revolver = 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("python_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("rnma_zm");
+	
+	has_executioner = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("judge_zm");
+	//
+	
+	//Other Weapons
+	has_smr = weapon == "saritch_zm";
+	has_m16_PaP = weapon == "m16_upgraded_zm";
+	has_m14 = self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("m14_zm");
+	has_m1911_PaP = weapon == "m1911_upgraded_zm";
 	//
 
 	if (!threat_is_player())
@@ -548,17 +577,14 @@ bot_update_aim(frames) //checked matches cerberus output
         centroid = ent getcentroid();
 		height = centroid[2] - prediction[2];
 		
-		if (has_wonder_staffs || has_blundersplat || has_slowgun || has_slipgun || has_raygun_mk2 || has_sniper)
+		if (has_wonder_staffs || has_blundersplat || has_slowgun || has_slipgun || has_raygun_mk2 || has_executioner)
 		aim_offset = 10;
 		
-		else if (has_blundergat || has_shotgun)
+		else if (has_blundergat || has_shotgun || has_assault_rifle || has_smg || has_smr || has_m16_PaP || has_m14 || has_revolver)
 		aim_offset = 20;
 		
-		else if (has_raygun || has_explosive_weapon)
+		else if (has_raygun || has_explosive_weapon || has_m1911_PaP || has_sniper)
 		aim_offset = 0;
-		
-		else if (has_primary_pistol)
-		aim_offset = 28;
 		
 		else
 		aim_offset = 25;
