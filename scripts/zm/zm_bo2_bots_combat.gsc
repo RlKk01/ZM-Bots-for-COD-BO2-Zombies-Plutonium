@@ -591,9 +591,9 @@ bot_update_aim(frames) //checked matches cerberus output
 
         // Distance correction
         if (dist > 1200)
-            aim_offset += 6;
+            aim_offset -= 5;
         else if (dist > 800)
-            aim_offset += 4;
+            aim_offset -= 4;
 
 		return prediction + (0, 0, height + aim_offset);
 	}
