@@ -410,50 +410,36 @@ get_closest_downed_teammate()
 
 bot_pickup_powerup()
 {
-	if(getDvar("mapname") == "zm_prison")
+	powerups = maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000);
+
+	if(!isDefined(powerups) || powerups.size == 0)
 	{
-		if(maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000).size == 0)
-		{
-			self CancelGoal("powerup");
-			return;
-		}
-		powerups = maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000);
-		foreach(powerup in powerups)
+		self CancelGoal("powerup");
+		return;
+	}
+
+	foreach(powerup in powerups)
+	{
+		if(getDvar("mapname") == "zm_prison")
 		{
 			if(is_in_cell_block(powerup.origin))
 				continue;
-			
-			if(FindPath(self.origin, powerup.origin, undefined, 0, 1))
-			{
-				self AddGoal(powerup.origin, 25, 2, "powerup");
-				if(self AtGoal("powerup") || Distance(self.origin, powerup.origin) < 50)
-				{
-					self CancelGoal("powerup");
-				}
-				return;
-			}
 		}
-	}
-	else
-	{
-		if(maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000).size == 0)
+
+		if(Distance(self.origin, powerup.origin) > 1000)
+			continue;
+
+		if(!FindPath(self.origin, powerup.origin, undefined, 0, 1))
+			continue;
+
+		self AddGoal(powerup.origin, 25, 2, "powerup");
+
+		if(self AtGoal("powerup") || Distance(self.origin, powerup.origin) < 50)
 		{
 			self CancelGoal("powerup");
-			return;
 		}
-		powerups = maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000);
-		foreach(powerup in powerups)
-		{
-			if(FindPath(self.origin, powerup.origin, undefined, 0, 1))
-			{
-				self AddGoal(powerup.origin, 25, 2, "powerup");
-				if(self AtGoal("powerup") || Distance(self.origin, powerup.origin) < 50)
-				{
-					self CancelGoal("powerup");
-				}
-				return;
-			}
-		}
+
+		return;
 	}
 }
 
