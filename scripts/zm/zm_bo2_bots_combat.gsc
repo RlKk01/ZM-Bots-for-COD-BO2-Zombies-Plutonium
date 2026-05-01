@@ -529,7 +529,8 @@ bot_update_aim(frames) //checked matches cerberus output
 
 	//Snipers
 	has_sniper = 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("barretm82_zm");
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("barretm82_zm") || 
+	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("dsr50_zm");
 	//
 
 	//Shotguns
@@ -577,14 +578,17 @@ bot_update_aim(frames) //checked matches cerberus output
         centroid = ent getcentroid();
 		height = centroid[2] - prediction[2];
 		
-		if (has_wonder_staffs || has_blundersplat || has_slowgun || has_slipgun || has_raygun_mk2 || has_executioner)
+		if (has_wonder_staffs || has_blundersplat || has_blundergat || has_slowgun || has_slipgun || has_raygun_mk2 || has_sniper || has_executioner)
 		aim_offset = 10;
 		
-		else if (has_blundergat || has_shotgun || has_assault_rifle || has_smg || has_smr || has_m16_PaP || has_m14 || has_revolver)
-		aim_offset = 20;
+		else if (has_shotgun || has_revolver)
+		aim_offset = 15;
 		
-		else if (has_raygun || has_explosive_weapon || has_m1911_PaP || has_sniper)
+		else if (has_raygun || has_explosive_weapon || has_m1911_PaP)
 		aim_offset = 0;
+		
+		else if (has_assault_rifle || has_smg || has_smr || has_m16_PaP || has_m14)
+		aim_offset = 20;
 		
 		else
 		aim_offset = 25;

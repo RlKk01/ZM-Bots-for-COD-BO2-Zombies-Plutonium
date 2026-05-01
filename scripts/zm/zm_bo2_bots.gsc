@@ -52,10 +52,7 @@ init()
 {
     bot_set_skill();
     
-    // Add debug
-    iprintln("^3Waiting for initial blackscreen...");
     flag_wait("initial_blackscreen_passed");
-    iprintln("^2Blackscreen passed, continuing bot setup...");
 
     if(!isdefined(level.using_bot_weapon_logic))
         level.using_bot_weapon_logic = 1;
@@ -71,15 +68,11 @@ init()
 
     bot_amount = GetDvarIntDefault("zm_bots", 0);
 
-    iprintln("^2Spawning " + bot_amount + " bots...");
-
     for(i=0; i<bot_amount; i++)
     {
-        iprintln("^3Spawning bot " + (i+1));
-        // Track spawned bot entities
         bot_entity = spawn_bot();
         level.bots[level.bots.size] = bot_entity;
-        wait 1; // Add a brief pause between bot spawns
+        wait 1;
     }
 }
 
@@ -113,17 +106,13 @@ bot_set_skill()
 
 spawn_bot()
 {
-    iprintln("^3Adding test client...");
     bot = addtestclient();
     if(!isDefined(bot))
     {
-        iprintln("^1Failed to add test client!");
         return;
     }
     
-    iprintln("^3Waiting for bot to spawn...");
     bot waittill("spawned_player");
-    iprintln("^2Bot spawned, configuring...");
     
     bot thread maps\mp\zombies\_zm::spawnspectator();
     if(isDefined(bot))
@@ -133,12 +122,9 @@ spawn_bot()
     }
     
     wait 1;
-    iprintln("^3Spawning bot as player...");
     
     if(isDefined(level.spawnplayer))
         bot [[level.spawnplayer]]();
-    else
-        iprintln("^1ERROR: level.spawnplayer not defined!");
 }
 
 onspawn()
@@ -694,7 +680,14 @@ bot_buy_box()
             return;
 
         // Check global box usage tracker to prevent multiple bots using box simultaneously
-        if(isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self)
+        if(isDefined(level.box_in_use_by_bot) && 
+		level.box_in_use_by_bot != self && 
+		isDefined(box._box_open) && 
+		box._box_open && 
+        isDefined(box.weapon_out) && 
+		box.weapon_out && 
+        isDefined(box.zbarrier) && 
+		isDefined(box.zbarrier.weapon_model))
         {
             self cancelgoal("boxBuy");
             return;
@@ -1184,9 +1177,9 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     // Define weapon tiers for better decision making
     tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "raygun_mark2", "ray_gun");
 	tier2_weapons = array("usrpg", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
-	tier3_weapons = array("870mcs", "lsat", "hamr", "rpd", "mg08", "scar", "hk416", "an94", "galil", "ak47", "mp44", "evoskorpion");
-    tier4_weapons = array("ksg", "srm1216", "svu", "tar21", "pdw57", "thompson", "fivesevendw", "judge");
-    tier5_weapons = array("dsr50", "saiga12", "barretm82", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip", "rnma");
+	tier3_weapons = array("ksg", "870mcs", "lsat", "hamr", "rpd", "mg08", "scar", "hk416", "an94", "galil", "ak47", "mp44", "evoskorpion");
+    tier4_weapons = array("srm1216", "saiga12", "svu", "tar21", "pdw57", "thompson", "fivesevendw", "judge");
+    tier5_weapons = array("dsr50", "barretm82", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip", "rnma");
     tier6_weapons = array("fnfal", "qcw05", "ak74u", "mp40", "kard", "beretta93r", "fiveseven", "python");
 	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "uzi", "m1911", "c96", "knife_ballistic");
     
