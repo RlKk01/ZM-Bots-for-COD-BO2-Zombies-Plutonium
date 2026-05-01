@@ -690,6 +690,7 @@ bot_buy_box()
 		isDefined(box.zbarrier.weapon_model))
         {
             self cancelgoal("boxBuy");
+			self cancelgoal("boxGrab");
             return;
         }
 		
