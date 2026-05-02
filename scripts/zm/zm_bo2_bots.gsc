@@ -267,7 +267,7 @@ bot_main()
 				if(self hasgoal("wander"))
 					self cancelgoal("wander");
 
-				wait 0.5;
+				wait 0.05;
 				continue;
 			}
 			self bot_combat_think(damage, attacker, direction);
@@ -312,8 +312,8 @@ bot_buy_perks()
 		}
 		else
 		{
-			perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
-			costs = array(1500, 3000, 2000, 2000, 3000, 1500, 2000, 2000);
+			perks = array("specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
+			costs = array(3000, 2000, 2000, 3000, 1500, 2000, 2000);
 		}
 		
         machines = GetEntArray("zombie_vending", "targetname");
@@ -479,7 +479,7 @@ bot_teleport_think()
 
 	if (getDvar("mapname") == "zm_highrise")
 	{
-		if(Distance(self.origin, players[0].origin) > 2000 && players[0] IsOnGround())
+		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
 		{
 			self SetOrigin(players[0].origin + (0,75,0));
 		}
@@ -681,17 +681,15 @@ bot_buy_box()
 
         // Check global box usage tracker to prevent multiple bots using box simultaneously
         if(isDefined(level.box_in_use_by_bot) && 
-		level.box_in_use_by_bot != self && 
-		isDefined(box._box_open) && 
-		box._box_open && 
-        isDefined(box.weapon_out) && 
-		box.weapon_out && 
-        isDefined(box.zbarrier) && 
-		isDefined(box.zbarrier.weapon_model))
+		level.box_in_use_by_bot != self)
         {
-            self cancelgoal("boxBuy");
-			self cancelgoal("boxGrab");
-            return;
+            if(self hasgoal("boxBuy"))
+				self cancelgoal("boxBuy");
+			
+			if(self hasgoal("boxGrab"))
+				self cancelgoal("boxGrab");
+			
+			return;
         }
 		
 		if (level.round_number <= 8)
@@ -726,6 +724,12 @@ bot_buy_box()
             {
                 if(!isDefined(box))
                     continue;
+				
+				if(isDefined(box._box_open) && box._box_open)
+					continue;
+				
+				if(isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self)
+					continue;
 
                 // Check if the box is open with a weapon ready
                 if(isDefined(box._box_open) && box._box_open &&
@@ -1552,12 +1556,12 @@ bot_buy_wallbuy()
 		self CancelGoal("weaponBuy");
 		return;
 	}
+	
 	foreach(wallbuy in wallbuys)
 	{
-		if(Distance(wallbuy.origin, self.origin) < 500 
+		if(Distance(wallbuy.origin, self.origin) <= 3000 
 		&& wallbuy.trigger_stub.cost <= self.score 
 		&& bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) 
-		&& FindPath(self.origin, wallbuy.origin, undefined, 0, 1) 
 		&& weapon != wallbuy.trigger_stub.zombie_weapon_upgrade 
 		&& !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
 		{
@@ -1574,11 +1578,12 @@ bot_buy_wallbuy()
 			break;
 		}
 	}
+	
 	if(!isdefined(weaponToBuy))
 		return;
 	
 	self AddGoal(weaponToBuy.origin, 99999, 2, "weaponBuy");
-	while(!self AtGoal("weaponBuy") && !Distance(self.origin, weaponToBuy.origin) < 99999)
+	while(!self AtGoal("weaponBuy") && !Distance(self.origin, weaponToBuy.origin) <= 99999)
 	{
 		wait 1;
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
