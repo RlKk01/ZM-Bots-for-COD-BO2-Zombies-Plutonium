@@ -328,15 +328,16 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 		clip = self getweaponammoclip(weapon);
 		max = weaponclipsize(weapon);
 
-		// If still not full, keep blocking attack
-		if (clip < max)
+		// Fail-safe: If the clip is full, OR the physical reload was interrupted
+		if (clip >= max || !self isreloading())
 		{
-			self allowattack(0);
-			return;
+			self.bot.reload_until_full = undefined;
 		}
 		else
 		{
-			self.bot.reload_until_full = undefined;
+			// If still actively reloading and not full, keep blocking attack
+			self allowattack(0);
+			return;
 		}
 	}
 	if (self bot_on_target(self.bot.threat.aim_target, 100))
