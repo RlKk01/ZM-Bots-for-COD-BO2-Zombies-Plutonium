@@ -479,7 +479,7 @@ bot_teleport_think()
 
 	if (getDvar("mapname") == "zm_highrise")
 	{
-		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
+		if(Distance(self.origin, players[0].origin) > 2000 && players[0] IsOnGround())
 		{
 			self SetOrigin(players[0].origin + (0,75,0));
 		}
@@ -1916,15 +1916,7 @@ bot_update_wander()
 		}
 		else if (getDvar("mapname") == "zm_highrise")
 		{
-			if(distance(self.origin, player.origin) > 800)
-			{
-				self AddGoal(player.origin, 100, 1, "wander");
-				continue;
-			}
-		}
-		else if (getDvar("mapname") == "zm_buried")
-		{
-			if(distance(self.origin, player.origin) > 800)
+			if(distance(self.origin, player.origin) > 600)
 			{
 				self AddGoal(player.origin, 100, 1, "wander");
 				continue;
