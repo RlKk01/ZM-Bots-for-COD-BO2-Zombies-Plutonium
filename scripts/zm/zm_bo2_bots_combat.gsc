@@ -70,7 +70,7 @@ bot_combat_think(damage, attacker, direction)
 		
 		if (!isDefined(self.bot.next_interact_time) || getTime() > self.bot.next_interact_time)
 		{
-			self.bot.next_interact_time = getTime() + 1000; // once per second
+			self.bot.next_interact_time = getTime() + 3000;
 	
 			self bot_safely_interact_with_doors();
 			self bot_safely_use_mystery_box();
@@ -504,7 +504,7 @@ bot_update_aim(frames) //checked matches cerberus output
 // New helper function - weapon aim offset lookup
 bot_get_weapon_aim_offset(weapon, dist)
 {
-	aim_offset = 25; // Default offset
+	aim_offset = 20; // Default offset
 	
 	if (isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || isSubStr(weapon, "slowgun") || 
 		isSubStr(weapon, "slipgun") || isSubStr(weapon, "mark2") || isSubStr(weapon, "dsr50") || 
@@ -522,16 +522,10 @@ bot_get_weapon_aim_offset(weapon, dist)
 	{
 		aim_offset = 0;
 	}
-	else if (isSubStr(weapon, "type95") || isSubStr(weapon, "tar21") || weapon == "an94_zm" || 
-			 isSubStr(weapon, "evoskorpion") || isSubStr(weapon, "mp5k") || isSubStr(weapon, "ak74u") || 
-			 weapon == "saritch_zm" || weapon == "m16_upgraded_zm" || isSubStr(weapon, "m14"))
-	{
-		aim_offset = 20;
-	}
 
 	// Distance correction
 	if (dist > 1200) aim_offset -= 5;
-	else if (dist > 800) aim_offset -= 4;
+	else if (dist > 800) aim_offset += 4;
 
 	return aim_offset;
 }
