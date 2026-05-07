@@ -7,6 +7,12 @@
 
 bot_combat_think(damage, attacker, direction)
 {
+	self notify("bot_combat_think_singleton");
+	self endon("bot_combat_think_singleton");
+
+	self endon("disconnect");
+	self endon("death");
+
 	self allowattack(0);
 	self pressads(0);
 	
@@ -14,7 +20,8 @@ bot_combat_think(damage, attacker, direction)
 	{
 		if (!bot_can_do_combat())
 		{
-			return;
+			wait 2; 
+			continue;
 		}
 		if(self atgoal("flee"))
 			self cancelgoal("flee");
@@ -29,7 +36,7 @@ bot_combat_think(damage, attacker, direction)
 			}
 			else
 			{
-				nodes = [];
+				nodes = undefined;
 			}
 			nearest = bot_nearest_node(self.origin);
 			if (isDefined(nearest) && !self hasgoal("flee"))
@@ -80,7 +87,7 @@ bot_combat_think(damage, attacker, direction)
 		{
 			self bot_revive_teammates();
 		}
-		wait 0.5;
+		wait 1;
 	}
 }
 
@@ -112,6 +119,7 @@ get_cached_zombies()
 	// Refresh cache if expired
 	if (current_time - level.zombie_cache_time > level.zombie_cache_refresh)
 	{
+		level.zombie_cache = undefined;
 		level.zombie_cache = getaispeciesarray(level.zombie_team, "all");
 		level.zombie_cache_time = current_time;
 	}
@@ -397,7 +405,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 
 bot_combat_dead(damage) //checked matches cerberus output
 {
-	wait 0.1;
+	wait 0.5;
 	self allowattack(0);
 	wait_endon(0.25, "damage");
 	self bot_clear_enemy();
@@ -506,15 +514,14 @@ bot_get_weapon_aim_offset(weapon, dist)
 {
 	aim_offset = 20; // Default offset
 	
-	if (isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || isSubStr(weapon, "slowgun") || 
-		isSubStr(weapon, "slipgun") || isSubStr(weapon, "mark2") || isSubStr(weapon, "dsr50") || 
-		isSubStr(weapon, "barrett") || isSubStr(weapon, "judge"))
+	if (isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
+		isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun"))
 	{
 		aim_offset = 10;
 	}
-	else if (isSubStr(weapon, "srm1216") || isSubStr(weapon, "ksg") || isSubStr(weapon, "saiga12") || 
-			 isSubStr(weapon, "870mcs") || isSubStr(weapon, "rottweil") || isSubStr(weapon, "python") || 
-			 isSubStr(weapon, "rnma"))
+	else if (isSubStr(weapon, "srm1216") || isSubStr(weapon, "saiga12") || 
+			 isSubStr(weapon, "ksg") || isSubStr(weapon, "870mcs") || 
+			 isSubStr(weapon, "rottweil") || isSubStr(weapon, "judge"))
 	{
 		aim_offset = 15;
 	}
@@ -524,8 +531,10 @@ bot_get_weapon_aim_offset(weapon, dist)
 	}
 
 	// Distance correction
-	if (dist > 1200) aim_offset -= 5;
-	else if (dist > 800) aim_offset += 4;
+	if (dist >= 1200)
+		aim_offset -= 10;
+	else if (dist >= 800)
+		aim_offset -= 5;
 
 	return aim_offset;
 }
@@ -537,34 +546,7 @@ bot_on_target(aim_target, radius) //checked matches cerberus output
 	origin = self getplayercamerapos();
 	len = distance(aim_target, origin);
 	end = origin + (forward * len);
-	if (distance2dsquared(aim_target, end) < (radius * radius))
-	{
-		return 1;
-	}
-	return 0;
-}
-
-bot_has_lmg() //checked changed at own discretion
-{
-	if (bot_has_weapon_class("mg"))
-	{
-		return 1;
-	}
-	return 0;
-}
-
-bot_has_weapon_class(class) //checked changed at own discretion
-{
-	if (self isreloading())
-	{
-		return 0;
-	}
-	weapon = self getcurrentweapon();
-	if (weapon == "none")
-	{
-		return 0;
-	}
-	if (weaponclass(weapon) == class)
+	if (distancesquared(aim_target, end) < (radius * radius))
 	{
 		return 1;
 	}
@@ -610,6 +592,12 @@ bot_can_do_combat() //checked matches cerberus output
 	{
 		return 0;
 	}
+	
+	if (is_true(self.bot.is_reviving))
+	{
+		return 0;
+	}
+	
 	return 1;
 }
 

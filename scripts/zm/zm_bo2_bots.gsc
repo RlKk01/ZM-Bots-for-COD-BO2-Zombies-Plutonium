@@ -75,7 +75,9 @@ init()
     for(i=0; i<bot_amount; i++)
     {
         bot_entity = spawn_bot();
+		
         level.bots[level.bots.size] = bot_entity;
+		
         wait 1;
     }
 }
@@ -267,10 +269,14 @@ bot_perks_origins()
 	
 	if (getDvar("mapname") == "zm_tomb")
 	{
-		self SetPerk("specialty_rof");
-		self SetPerk("specialty_flakjacket");
-		self SetPerk("specialty_deadshot");
-		self waittill("player_revived");
+		wait 1;
+		while(1)
+		{
+			self SetPerk("specialty_rof");
+			self SetPerk("specialty_flakjacket");
+			self SetPerk("specialty_deadshot");
+			self waittill("player_revived");
+		}
 	}
 }
 
@@ -283,7 +289,9 @@ bot_spawn_init()
 	}
 	self SwitchToWeapon("m1911_zm");
 	self SetSpawnWeapon("m1911_zm");
+	
 	time = getTime();
+	
 	if (!isDefined(self.bot))
 	{
 		self.bot = spawnstruct();
@@ -351,15 +359,15 @@ bot_main()
 				
 			if(self hasgoal("wander"))
 				self cancelgoal("wander");
-
-			wait 0.05;
+			
+			wait 0.5;
 			continue;
 		}
 		
 		self bot_combat_think(damage, attacker, direction);
 		self bot_update_lookat();
-		self bot_stand_fix();
 		self bot_teleport_think();
+		self bot_stand_fix();
 		
 		if(is_true(level.using_bot_weapon_logic))
 		{
@@ -395,20 +403,21 @@ bot_buy_perks()
 		
 		if(level.perk_purchase_limit <= 5)
 		{
-			perks = array("specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_flakjacket", "specialty_grenadepulldeath");
-			costs = array(3000, 2000, 2000, 3000, 2000, 2000);
+			perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_flakjacket", "specialty_grenadepulldeath");
+			costs = array(1500, 3000, 2000, 2000, 3000, 2000, 2000);
 		}
 		else
 		{
-			perks = array("specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
-			costs = array(3000, 2000, 2000, 3000, 1500, 2000, 2000);
+			perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
+			costs = array(1500, 3000, 2000, 2000, 3000, 1500, 2000, 2000);
 		}
 		
         machines = get_cached_vending_machines(); // Use cached array
         nearby_machines = [];
+		
         foreach(machine in machines)
         {
-            if(Distance(machine.origin, self.origin) <= 99999)
+            if(DistanceSquared(machine.origin, self.origin) <= 999999999)
             {
                 nearby_machines[nearby_machines.size] = machine;
             }
@@ -440,32 +449,94 @@ bot_buy_perks()
 
 bot_revive_teammates()
 {
-	if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-	{
-		self cancelgoal("revive");
+    if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+    {
+        if(self hasgoal("revive"))
+            self cancelgoal("revive");
+            
+        self.bot.is_reviving = false;
+        return;
+    }
+	
+	if(is_true(self.bot.is_reviving))
 		return;
-	}
+	
 	if(!self hasgoal("revive"))
 	{
 		teammate = self get_closest_downed_teammate();
+		
 		if(!isdefined(teammate))
 			return;
+		
 		self AddGoal(teammate.origin, 50, 3, "revive");
 	}
 	else
 	{
-		if(self AtGoal("revive") || Distance(self.origin, self GetGoal("revive")) < 75)
-		{
-			teammate = self get_closest_downed_teammate();
-			teammate.revivetrigger disable_trigger();
-			wait 0.75;
-			teammate.revivetrigger enable_trigger();
-			if(!self maps\mp\zombies\_zm_laststand::player_is_in_laststand() && teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			{
-				teammate maps\mp\zombies\_zm_laststand::auto_revive(self);
-			}
-		}
+        if(self AtGoal("revive") || DistanceSquared(self.origin, self GetGoal("revive")) < 5625)
+        {
+            teammate = self get_closest_downed_teammate();
+            
+            if(!isdefined(teammate))
+            {
+                self cancelgoal("revive");
+                return;
+            }
+            self thread bot_simulate_revive(teammate);
+        }
 	}
+}
+
+bot_simulate_revive(teammate)
+{
+    self endon("death");
+    self endon("disconnect");
+	
+    teammate endon("death");
+    teammate endon("disconnect");
+	
+    // 1. SAVE the current weapon so we can give it back later
+    current_weapon = self getCurrentWeapon();
+	
+    // If for some reason they have no weapon, let's find one from their inventory
+    if (current_weapon == "none" || current_weapon == "revive_weapon_zm")
+    {
+        weapons = self getweaponslistprimaries();
+        if (isDefined(weapons) && weapons.size > 0)
+            current_weapon = weapons[0];
+    }
+
+    // Lock bot state
+    self.bot.is_reviving = true;
+    self cancelgoal("revive");
+
+    if(self hasgoal("wander"))
+        self cancelgoal("wander");
+	
+    self lookat(teammate.origin);
+	
+    while(teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+    {
+        if(DistanceSquared(self.origin, teammate.origin) > 10000)
+        {
+            break;
+        }
+
+        self lookat(teammate.origin);
+        self pressusebutton(2); 
+
+        wait 0.1;
+    }
+	
+    // 2. RESTORE the weapon
+    // We wait a tiny bit for the engine's internal revive script to finish its cleanup
+    wait 0.3;
+	
+    if (isDefined(current_weapon) && current_weapon != "none")
+    {
+        self switchtoweapon(current_weapon);
+    }
+	
+    self.bot.is_reviving = false;
 }
 
 get_closest_downed_teammate()
@@ -474,12 +545,14 @@ get_closest_downed_teammate()
 		return;
 	
 	downed_players = [];
+	
 	foreach(player in get_players())
 	{
 		if(player maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-		downed_players[downed_players.size] = player;
+			downed_players[downed_players.size] = player;
 	}
 	downed_players = arraysort(downed_players, self.origin);
+	
 	return downed_players[0];
 }
 
@@ -500,6 +573,10 @@ bot_pickup_powerup()
 
 	foreach(powerup in powerups)
 	{
+		// Make the bot avoid picking up the nuke powerup
+		if(isDefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
+			continue;
+		
 		if(getDvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
 			continue;
 
@@ -537,27 +614,6 @@ is_in_cell_block(origin)
 	return false;
 }
 
-bot_stand_fix()
-{
-	self endon("death");
-	self endon("disconnect");
-	level endon("end_game");
-	
-	if (self isonground() && self getstance() != "prone")
-	{
-		wait 0.2;
-		self botaction(BOT_ACTION_STAND);
-	}
-	else
-	{
-		if (self isonground() && self getstance() != "crouch")
-		{
-			wait 0.2;
-			self botaction(BOT_ACTION_STAND);
-		}
-	}
-}
-
 bot_teleport_think()
 {
 	self endon("death");
@@ -566,26 +622,46 @@ bot_teleport_think()
 	
 	players = get_players();
 
-	if (getDvar("mapname") == "zm_highrise")
+	if (getDvar("mapname") == "zm_transit")
 	{
-		if(Distance(self.origin, players[0].origin) > 2000 && players[0] IsOnGround())
+		if(DistanceSquared(self.origin, players[0].origin) > 3240000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,75,0));
+			self SetOrigin(players[0].origin + (0,60,0));
+		}
+	}
+	else if (getDvar("mapname") == "zm_highrise")
+	{
+		if(DistanceSquared(self.origin, players[0].origin) > 1440000 && players[0] IsOnGround())
+		{
+			self SetOrigin(players[0].origin + (0,60,0));
 		}
 	}
 	else if (getDvar("mapname") == "zm_buried")
 	{
-		if(Distance(self.origin, players[0].origin) > 3000 && players[0] IsOnGround())
+		if(DistanceSquared(self.origin, players[0].origin) > 9000000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,75,0));
+			self SetOrigin(players[0].origin + (0,60,0));
 		}
 	}
 	else if (getDvar("mapname") == "zm_prison")
 	{
-		if(Distance(self.origin, players[0].origin) > 12500 && players[0] IsOnGround())
+		if(DistanceSquared(self.origin, players[0].origin) > 156250000 && players[0] IsOnGround())
 		{
-			self SetOrigin(players[0].origin + (0,75,0));
+			self SetOrigin(players[0].origin + (0,60,0));
 		}
+	}
+}
+
+bot_stand_fix()
+{
+	self endon("death");
+	self endon("disconnect");
+	level endon("end_game");
+	
+	if (self isonground() && self getstance() != "crouch" || self getstance() != "prone")
+	{
+		wait 0.2;
+		self botaction(BOT_ACTION_STAND);
 	}
 }
 
@@ -601,6 +677,11 @@ bot_check_player_blocking()
         
         // Skip checks if bot is in last stand
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+            continue;
+		
+        // Skip checks if the bot is currently reviving someone
+        // This ensures they stay perfectly still during the revive process
+        if(is_true(self.bot.is_reviving))
             continue;
         
         foreach(player in get_players())
@@ -740,21 +821,6 @@ bot_pack_gun()
 
 bot_buy_box()
 {
-	// Don't spend points on the box if they have wonder weapons
-	if(self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("raygun_mark2_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slipgun_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("slowgun_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundergat_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("blundersplat_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_water_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_fire_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_lightning_zm") || 
-	self maps\mp\zombies\_zm_weapons::has_weapon_or_upgrade("staff_air_zm"))
-	{
-		self CancelGoal("boxBuy");
-		return;
-	}
-	
     // Only try to access the box on a timed interval
     if (!isDefined(self.bot.box_purchase_time) || GetTime() > self.bot.box_purchase_time)
     {
@@ -767,6 +833,17 @@ bot_buy_box()
         // Don't try if we can't afford it (use 950 cost)
         if(self.score < 950)
             return;
+		
+		weapon = self GetCurrentWeapon();
+		
+		// Don't spend points on the box if they have wonder weapons
+		if(isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
+		   isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun") || 
+		   isSubStr(weapon, "mark2"))
+		{
+			self CancelGoal("boxBuy");
+			return;
+		}
 
         // Check global box usage tracker to prevent multiple bots using box simultaneously
         if(isDefined(level.box_in_use_by_bot) && 
@@ -801,7 +878,7 @@ bot_buy_box()
 			if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 300000))
 				return;
 		}
-
+		
         // --- Start: Logic to grab from an already open box (Kept from original) ---
         if(!isDefined(self.bot.grab_weapon_time) || GetTime() > self.bot.grab_weapon_time)
         {
@@ -922,6 +999,17 @@ bot_buy_box()
                     }
                     return; // Wait until closer
                 }
+				else if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
+				{
+					if (closestOpenBoxDist < 800)
+					{
+						if(!self hasgoal("boxGrab"))
+						{
+							self AddGoal(activeBox.origin, 150, 3, "boxGrab");
+						}
+						return;
+					}
+				}
             }
         }
         // --- End: Logic to grab from an already open box ---
@@ -969,6 +1057,13 @@ bot_buy_box()
         dist = Distance(self.origin, current_box.origin);
         interaction_dist = 150; // Distance to interact
         detection_dist = 99999; // Distance to start moving towards
+		
+		if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
+		{
+			dist = Distance(self.origin, current_box.origin);
+			interaction_dist = 150;
+			detection_dist = 800;
+		}
 
         // Only try to use box if we have enough points and it's reasonably close
         if(self.score >= 950 && dist < detection_dist)
@@ -1636,7 +1731,9 @@ bot_buy_wallbuy()
 	{
 		if(DistanceSquared(wallbuy.origin, self.origin) <= 9000000 && wallbuy.trigger_stub.cost <= self.score)
 		{
-			if(bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
+			if(bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
+			   weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && 
+			   !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
 			{
 				if(weapon == upgrade_name)
 					return;
@@ -1656,7 +1753,7 @@ bot_buy_wallbuy()
 	if(!isdefined(weaponToBuy)) 
 		return;
 	
-	self AddGoal(weaponToBuy.origin, 9000000, 2, "weaponBuy");
+	self AddGoal(weaponToBuy.origin, 3000, 2, "weaponBuy");
 	
 	while(!self AtGoal("weaponBuy") && !DistanceSquared(self.origin, weaponToBuy.origin) <= 9000000)
 	{
@@ -1712,7 +1809,7 @@ bot_buy_door()
         
         // Find the closest valid door
         closestDoor = undefined;
-        closestDist = 300; // Reduced max distance for realism
+        closestDistSq = 90000; // Reduced max distance for realism
 
         foreach(door in doors)
         {
@@ -1742,11 +1839,11 @@ bot_buy_door()
             }
 
             // Check distance
-            dist = Distance(self.origin, door.origin);
-            if(dist < closestDist)
+            dist_sq = DistanceSquared(self.origin, door.origin);
+            if(dist_sq < closestDistSq)
             {
                 closestDoor = door;
-                closestDist = dist;
+                closestDistSq = dist_sq;
             }
         }
 
@@ -1784,8 +1881,8 @@ bot_clear_debris()
 {
     if (!isDefined(self.bot.debris_purchase_time) || GetTime() > self.bot.debris_purchase_time)
     {
-        // Only attempt to clear debris every 4 seconds
-        self.bot.debris_purchase_time = GetTime() + 4000;
+        // Only attempt to clear debris every 5 seconds
+        self.bot.debris_purchase_time = GetTime() + 5000;
         
         // Get all potential debris piles
         debris = get_cached_debris(); // Use cached debris
@@ -1795,7 +1892,7 @@ bot_clear_debris()
         
         // Find the closest valid debris pile
         closestDebris = undefined;
-        closestDist = 500; // Reduced max distance for realism
+        closestDistSq = 250000; // Reduced max distance for realism
         
         foreach(pile in debris)
         {
@@ -1821,9 +1918,6 @@ bot_clear_debris()
             // Skip if we can't afford it
             if(self.score < pile.zombie_cost)
                 continue;
-            
-            // Check distance first
-            dist = Distance(self.origin, pile.origin);
             
             // Get nearby nodes for path finding
             nearbyNodes = GetNodesInRadius(pile.origin, 150, 0);
@@ -1868,10 +1962,12 @@ bot_clear_debris()
             if(!pathFound)
                 continue;
             
-            if(dist < closestDist)
+            // Check distance first
+            dist_sq = DistanceSquared(self.origin, pile.origin);
+            if(dist_sq < closestDistSq)
             {
                 closestDebris = pile;
-                closestDist = dist;
+                closestDistSq = dist_sq;
             }
         }
         
@@ -1879,7 +1975,7 @@ bot_clear_debris()
         if(isDefined(closestDebris))
         {
             // Move toward the debris if not close enough
-            if(closestDist > 300) // Reduced interaction range
+            if(closestDistSq > 90000) // Reduced interaction range
             {
                 self AddGoal(closestDebris.origin, 300, 2, "debrisClear");
                 return false;
@@ -1999,7 +2095,7 @@ bot_update_wander()
 				self CancelGoal("wander");
 			}
 		}
-		else 
+		else
 		{
 			if(!self HasGoal("wander"))
 			{
@@ -2010,7 +2106,6 @@ bot_update_wander()
 				}
 			}
 		}
-		
 		wait 0.5;
 	}
 }
@@ -2018,15 +2113,18 @@ bot_update_wander()
 get_random_walkable_location(origin, range, player)
 {
 	tries = 0;
+	
 	for(;;)
 	{
 		x = origin[0] + randomintrange(range * -1,range);
 		y = origin[1] + randomintrange(range * -1,range);
 		z = origin[2] + randomintrange(range * -1,range);
-		if(check_point_in_playable_area( (x,y,z) ))
+		
+		if(check_point_in_playable_area((x,y,z)))
 		{
 			return (x,y,z);
 		}
+		
 		if(tries == 1000)
 		{
 			if(isDefined(player))
@@ -2035,8 +2133,9 @@ get_random_walkable_location(origin, range, player)
 			}
 			return false;
 		}
+		
 		tries += 1;
-		wait 0.01;
+		wait 0.5;
 	}
 }
 
@@ -2054,6 +2153,7 @@ bot_should_pack()
 {
 	if(maps\mp\zombies\_zm_weapons::can_upgrade_weapon(self GetCurrentWeapon()))
 		return 1;
+	
 	return 0;
 }
 
@@ -2062,6 +2162,7 @@ bot_reset_flee_goal()
 	self endon("death");
 	self endon("disconnect");
 	level endon("end_game");
+	
 	while(1)
 	{
 		self CancelGoal("flee");
@@ -2079,6 +2180,7 @@ bot_wakeup_think()
 	{
 		wait self.bot.think_interval;
 		wait (randomfloat(0.05));
+		
 		self notify("wakeup");
 	}
 }
@@ -2093,7 +2195,9 @@ bot_damage_think()
 	for (;;)
 	{
 		self waittill("damage", damage, attacker, direction, point, mod, unused1, unused2, unused3, unused4, weapon, flags, inflictor);
+		
 		self.bot.attacker = attacker;
+		
 		self notify("wakeup", damage, attacker, direction);
 	}
 }
@@ -2101,6 +2205,7 @@ bot_damage_think()
 bot_update_lookat()
 {
 	path = 0;
+	
 	if (isDefined(self getlookaheaddir()))
 		path = 1;
 
@@ -2124,15 +2229,18 @@ bot_update_lookat()
 bot_get_look_at()
 {
 	enemy = bot_get_closest_enemy(self.origin);
+	
 	if (isDefined(enemy))
 	{
 		node = getvisiblenode(self.origin, enemy.origin);
+		
 		if (isDefined(node) && distancesquared(self.origin, node.origin) > 1048576)
 		{
 			return node.origin;
 		}
 	}
 	spawn = self getgoal("wander");
+	
 	if (isDefined(spawn))
 	{
 		node = getvisiblenode(self.origin, spawn);
@@ -2157,6 +2265,7 @@ bot_get_closest_enemy(origin)
 			continue;
         
         distSq = DistanceSquared(origin, enemy.origin);
+		
         if(distSq < closestDistSq)
         {
             closestDistSq = distSq;
@@ -2169,7 +2278,9 @@ bot_get_closest_enemy(origin)
 bot_update_weapon()
 {
 	weapon = self GetCurrentWeapon();
+	
 	primaries = self getweaponslistprimaries();
+	
 	foreach (primary in primaries)
 	{
 		if (primary != weapon)
@@ -2190,8 +2301,10 @@ bot_give_ammo()
 	for(;;)
 	{
 		primary_weapons = self GetWeaponsListPrimaries();
+		
 		j=0;
-		while(j<primary_weapons.size)
+		
+		while(j <primary_weapons.size)
 		{
 			self GiveMaxAmmo(primary_weapons[j]);
 			j++;
@@ -2203,6 +2316,7 @@ bot_give_ammo()
 bot_update_failsafe()
 {
 	time = getTime();
+	
 	if ((time - self.spawntime) < 7500)
 	{
 		return;
@@ -2211,15 +2325,19 @@ bot_update_failsafe()
 	{
 		return;
 	}
-	if (!self atgoal() && distance2dsquared(self.bot.previous_origin, self.origin) < 256)
+	if (!self atgoal() && distancesquared(self.bot.previous_origin, self.origin) < 256)
 	{
 		nodes = getnodesinradius(self.origin, 512, 0);
 		nodes = array_randomize(nodes);
+		
 		nearest = bot_nearest_node(self.origin);
+		
 		failsafe = 0;
+		
 		if (isDefined(nearest))
 		{
 			i = 0;
+			
 			while (i < nodes.size)
 			{
 				if (!bot_failsafe_node_valid(nearest, nodes[ i ]))
@@ -2266,7 +2384,7 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		return 0;
 	}
-	if ((node.origin[2] - self.origin[2]) > 18)
+	if ((node.origin[2] - self.origin[2]) > 24)
 	{
 		return 0;
 	}
@@ -2295,7 +2413,9 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		return 0;
 	}
+	
 	goal = bot_nearest_node(spawns[0].origin);
+	
 	if (isDefined(goal) && findpath(node.origin, goal.origin, undefined, 0, 1))
 	{
 		return 1;
@@ -2306,11 +2426,14 @@ bot_failsafe_node_valid(nearest, node)
 bot_nearest_node(origin)
 {
 	node = getnearestnode(origin);
+	
 	if (isDefined(node))
 	{
 		return node;
 	}
+	
 	nodes = getnodesinradiussorted(origin, 256, 0, 256);
+	
 	if (nodes.size)
 	{
 		return nodes[0];
