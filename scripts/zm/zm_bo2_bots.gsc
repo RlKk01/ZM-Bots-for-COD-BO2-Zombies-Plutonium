@@ -2275,23 +2275,6 @@ bot_get_closest_enemy(origin)
 	return closestEnemy;
 }
 
-bot_update_weapon()
-{
-	weapon = self GetCurrentWeapon();
-	
-	primaries = self getweaponslistprimaries();
-	
-	foreach (primary in primaries)
-	{
-		if (primary != weapon)
-		{
-			self switchtoweapon(primary);
-			return;
-		}
-		i++;
-	}
-}
-
 bot_give_ammo()
 {
 	self endon("disconnect");
@@ -2321,6 +2304,7 @@ bot_update_failsafe()
 	{
 		return;
 	}
+	
 	if (time < self.bot.update_failsafe)
 	{
 		return;
@@ -2329,7 +2313,6 @@ bot_update_failsafe()
 	{
 		nodes = getnodesinradius(self.origin, 512, 0);
 		nodes = array_randomize(nodes);
-		
 		nearest = bot_nearest_node(self.origin);
 		
 		failsafe = 0;
@@ -2337,10 +2320,9 @@ bot_update_failsafe()
 		if (isDefined(nearest))
 		{
 			i = 0;
-			
 			while (i < nodes.size)
 			{
-				if (!bot_failsafe_node_valid(nearest, nodes[ i ]))
+				if (!bot_failsafe_node_valid(nearest, nodes[i]))
 				{
 					i++;
 					continue;
@@ -2384,31 +2366,38 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		return 0;
 	}
-	if ((node.origin[2] - self.origin[2]) > 24)
+	
+	if ((node.origin[2] - self.origin[2]) > 18)
 	{
 		return 0;
 	}
+	
 	if (nearest == node)
 	{
 		return 0;
 	}
+	
 	if (!nodesvisible(nearest, node))
 	{
 		return 0;
 	}
+	
 	if (isDefined(level.spawn_all) && level.spawn_all.size > 0)
 	{
 		spawns = arraysort(level.spawn_all, node.origin);
 	}
+	
 	else if (isDefined(level.spawnpoints) && level.spawnpoints.size > 0)
 	{
 		spawns = arraysort(level.spawnpoints, node.origin);
 	}
+	
 	else if (isDefined(level.spawn_start) && level.spawn_start.size > 0)
 	{
 		spawns = arraycombine(level.spawn_start["allies"], level.spawn_start["axis"], 1, 0);
 		spawns = arraysort(spawns, node.origin);
 	}
+	
 	else
 	{
 		return 0;

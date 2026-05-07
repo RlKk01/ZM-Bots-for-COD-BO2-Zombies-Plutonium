@@ -414,20 +414,26 @@ bot_combat_dead(damage) //checked matches cerberus output
 bot_should_hip_fire() //checked matches cerberus output
 {
 	enemy = self.bot.threat.entity;
+	
 	weapon = self getcurrentweapon();
+	
 	if (weapon == "none")
 	{
 		return 0;
 	}
+	
 	if (weaponisdualwield(weapon))
 	{
 		return 1;
 	}
+	
 	class = weaponclass(weapon);
+	
 	if (isplayer(enemy) && class == "spread")
 	{
 		return 1;
 	}
+	
 	distsq = distancesquared(self.origin, enemy.origin);
 	distcheck = 0;
 	switch(class)
@@ -452,10 +458,12 @@ bot_should_hip_fire() //checked matches cerberus output
 			distcheck = 300;
 			break;
 	}
+	
 	if (isweaponscopeoverlay(weapon))
 	{
 		distcheck = 500;
 	}
+	
 	return distsq < (distcheck * distcheck);
 }
 
