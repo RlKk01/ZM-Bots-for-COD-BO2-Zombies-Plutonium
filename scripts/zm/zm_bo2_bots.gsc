@@ -367,7 +367,7 @@ bot_main()
 			if(self hasgoal("wander"))
 				self cancelgoal("wander");
 			
-			wait 0.5;
+			wait 0.01;
 			continue;
 		}
 		
