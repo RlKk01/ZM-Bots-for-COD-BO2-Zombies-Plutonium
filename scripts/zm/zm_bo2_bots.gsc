@@ -55,11 +55,18 @@ init()
 
     if(!isdefined(level.using_bot_weapon_logic))
         level.using_bot_weapon_logic = 1;
+	
     if(!isdefined(level.using_bot_revive_logic))
         level.using_bot_revive_logic = 1;
 
     // Initialize box usage variables
     level.box_in_use_by_bot = undefined;
+	
+    if(!isDefined(level.door_being_opened))
+        level.door_being_opened = false;
+	
+    if(!isDefined(level.mystery_box_teddy_locations))
+        level.mystery_box_teddy_locations = [];
 
     // Setup bot tracking array
     if (!isdefined(level.bots))
@@ -385,6 +392,8 @@ bot_main()
 		self bot_buy_door();  // Added door buying functionality
 		self bot_clear_debris();  // Added debris clearing functionality
 		self bot_buy_box();  // Added box buying functionality
+		
+		wait 0.5;
 	}
 }
 
@@ -449,6 +458,11 @@ bot_buy_perks()
 
 bot_revive_teammates()
 {
+	if(isDefined(self.bot.next_revive_check) && GetTime() < self.bot.next_revive_check)
+		return;
+        
+    self.bot.next_revive_check = GetTime() + 2000;
+	
     if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
         if(self hasgoal("revive"))
@@ -620,7 +634,15 @@ bot_teleport_think()
 	self endon("disconnect");
 	level endon("end_game");
 	
+    if(isDefined(self.bot.next_teleport_check) && GetTime() < self.bot.next_teleport_check)
+        return;
+	
+    self.bot.next_teleport_check = GetTime() + 1000;
+	
 	players = get_players();
+	
+	if(players.size == 0)
+		return;
 
 	if (getDvar("mapname") == "zm_transit")
 	{
@@ -658,9 +680,8 @@ bot_stand_fix()
 	self endon("disconnect");
 	level endon("end_game");
 	
-	if (self isonground() && self getstance() != "crouch" || self getstance() != "prone")
+	if (self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
 	{
-		wait 0.2;
 		self botaction(BOT_ACTION_STAND);
 	}
 }
@@ -673,7 +694,7 @@ bot_check_player_blocking()
     
     while(1)
     {
-        wait 0.8;
+        wait randomfloatrange(0.8, 1.5);
         
         // Skip checks if bot is in last stand
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
@@ -2078,6 +2099,10 @@ bot_update_wander()
 
 		players = get_players();
 		player = players[0];
+		
+		if(player.size == 0)
+			continue;
+		
 		dist_sq = DistanceSquared(self.origin, player.origin);
 		
 		if(dist_sq > 1000000)
@@ -2097,12 +2122,32 @@ bot_update_wander()
 		}
 		else
 		{
-			if(!self HasGoal("wander"))
+			if(!isDefined(self.bot.last_wander_pos))
 			{
-				location = get_random_walkable_location(player.origin, 1000, self);
+				self.bot.last_wander_pos = self.origin;
+				self.bot.wander_stay_time = getTime();
+			}
+			
+			if(DistanceSquared(self.origin, self.bot.last_wander_pos) > 256) 
+			{
+				self.bot.last_wander_pos = self.origin;
+				self.bot.wander_stay_time = getTime();
+			}
+			
+			time_at_point = (getTime() - self.bot.wander_stay_time) / 1000;
+			
+			if(!self HasGoal("wander") || self AtGoal("wander") || time_at_point >= 2)
+			{
+				location = get_random_walkable_location(player.origin, 800, self);
+
 				if(isDefined(location))
 				{
+					self CancelGoal("wander");
+					
 					self AddGoal(location, 100, 1, "wander");
+					
+					self.bot.last_wander_pos = self.origin;
+					self.bot.wander_stay_time = getTime();
 				}
 			}
 		}
@@ -2116,26 +2161,21 @@ get_random_walkable_location(origin, range, player)
 	
 	for(;;)
 	{
-		x = origin[0] + randomintrange(range * -1,range);
-		y = origin[1] + randomintrange(range * -1,range);
-		z = origin[2] + randomintrange(range * -1,range);
+		x = origin[0] + randomintrange(range * -1, range);
+		y = origin[1] + randomintrange(range * -1, range);
+		z = origin[2] + randomintrange(range * -1, range);
 		
 		if(check_point_in_playable_area((x,y,z)))
-		{
 			return (x,y,z);
-		}
 		
-		if(tries == 1000)
+		if(tries >= 15)
 		{
-			if(isDefined(player))
-			{
-				get_players()[0] iprintln(player.name + " failed the check 1000 times!");
-			}
-			return false;
+			return origin;
 		}
 		
-		tries += 1;
-		wait 0.5;
+		tries ++;
+		
+		wait 0.1;
 	}
 }
 

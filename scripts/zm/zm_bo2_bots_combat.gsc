@@ -20,7 +20,7 @@ bot_combat_think(damage, attacker, direction)
 	{
 		if (!bot_can_do_combat())
 		{
-			wait 2; 
+			wait 1; 
 			continue;
 		}
 		if(self atgoal("flee"))
@@ -67,13 +67,6 @@ bot_combat_think(damage, attacker, direction)
 		//ADD OTHER COMBAT TASKS HERE.
 		self bot_combat_main();
 		self bot_pickup_powerup();
-
-		// Initialize door coordination and mystery box tracking variables if not defined
-		if(!isDefined(level.door_being_opened))
-			level.door_being_opened = false;
-			
-		if(!isDefined(level.mystery_box_teddy_locations))
-			level.mystery_box_teddy_locations = [];
 		
 		if (!isDefined(self.bot.next_interact_time) || getTime() > self.bot.next_interact_time)
 		{
@@ -87,7 +80,8 @@ bot_combat_think(damage, attacker, direction)
 		{
 			self bot_revive_teammates();
 		}
-		wait 1;
+		
+		wait 0.05;
 	}
 }
 
