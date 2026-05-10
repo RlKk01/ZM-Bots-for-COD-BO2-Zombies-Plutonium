@@ -76,6 +76,7 @@ init()
     init_vending_cache();
     init_door_cache();
     init_debris_cache();
+	init_zombie_cache();
 
     bot_amount = GetDvarIntDefault("zm_bots", 0);
 
@@ -166,6 +167,34 @@ get_cached_debris()
     }
     
     return level.debris_cache;
+}
+
+// Zombie cache
+init_zombie_cache()
+{
+	if (!isDefined(level.zombie_cache))
+	{
+		level.zombie_cache = [];
+		level.zombie_cache_time = 0;
+		level.zombie_cache_refresh = 1000; // Refresh every 1 second
+	}
+}
+
+get_cached_zombies()
+{
+	init_zombie_cache();
+	
+	current_time = getTime();
+	
+	// Refresh cache if expired
+	if (current_time - level.zombie_cache_time > level.zombie_cache_refresh)
+	{
+		level.zombie_cache = undefined;
+		level.zombie_cache = getaispeciesarray(level.zombie_team, "all");
+		level.zombie_cache_time = current_time;
+	}
+	
+	return level.zombie_cache;
 }
 
 bot_set_skill()
@@ -315,6 +344,9 @@ bot_spawn_init()
 	self.bot.threat.time_aim_interval = 0;
 	self.bot.threat.time_aim_correct = 0;
 	self.bot.threat.update_riotshield = 0;
+	
+	self.bot.is_meleeing = undefined;
+	self allowattack(1);
 }
 
 bot_main()
@@ -374,7 +406,7 @@ bot_main()
 		self bot_clear_debris();  // Added debris clearing functionality
 		self bot_buy_box();  // Added box buying functionality
 		
-		wait 0.1;
+		wait 0.05;
 	}
 }
 
@@ -512,7 +544,6 @@ bot_simulate_revive(teammate)
         }
 
         self lookat(teammate.origin);
-		self allowattack(0);
         self pressusebutton(2); 
 
         wait 0.05;
@@ -527,7 +558,6 @@ bot_simulate_revive(teammate)
         self switchtoweapon(current_weapon);
     }
 	
-	self allowattack(1);
     self.bot.is_reviving = false;
 }
 
@@ -1685,6 +1715,25 @@ NodeVisible(origin1, origin2)
 	return SightTracePassed(origin1, origin2, false, undefined);
 }
 
+// Optimized array contains - using direct index instead of loop for common case
+fast_array_contains(array, value)
+{
+	if(!isDefined(array) || !array.size)
+		return false;
+	
+	// Quick check for exact match first
+	foreach(item in array)
+	{
+		if(item == value)
+			return true;
+		// Compare origins with a small tolerance
+		if(distancesquared(item, value) < 100)
+			return true;
+	}
+	
+	return false;
+}
+
 bot_should_pack()
 {
 	if(maps\mp\zombies\_zm_weapons::can_upgrade_weapon(self GetCurrentWeapon()))
@@ -1725,6 +1774,7 @@ bot_damage_think()
 {
 	self notify("bot_damage_think");
 	self endon("bot_damage_think");
+	
 	self endon("disconnect");
 	level endon("game_ended");
 	
@@ -1775,22 +1825,25 @@ bot_get_look_at()
 			return node.origin;
 		}
 	}
+	
 	spawn = self getgoal("wander");
 	
 	if (isDefined(spawn))
 	{
 		node = getvisiblenode(self.origin, spawn);
 	}
+	
 	if (isDefined(node) && distancesquared(self.origin, node.origin) > 1048576)
 	{
 		return node.origin;
 	}
+	
 	return undefined;
 }
 
 bot_get_closest_enemy(origin)
 {
-	enemies = getaispeciesarray(level.zombie_team, "all");
+	enemies = get_cached_zombies(); // Use cached array
     
     closestEnemy = undefined;
     closestDistSq = 100000000; // Large number
@@ -1845,6 +1898,7 @@ bot_update_failsafe()
 	{
 		return;
 	}
+	
 	if (!self atgoal() && distancesquared(self.bot.previous_origin, self.origin) < 256)
 	{
 		nodes = getnodesinradius(self.origin, 512, 0);
@@ -1892,6 +1946,7 @@ bot_update_failsafe()
 			self bot_update_lookat();
 		}
 	}
+	
 	self.bot.update_failsafe = getTime() + 3500;
 	self.bot.previous_origin = self.origin;
 }
@@ -1922,18 +1977,15 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		spawns = arraysort(level.spawn_all, node.origin);
 	}
-	
 	else if (isDefined(level.spawnpoints) && level.spawnpoints.size > 0)
 	{
 		spawns = arraysort(level.spawnpoints, node.origin);
 	}
-	
 	else if (isDefined(level.spawn_start) && level.spawn_start.size > 0)
 	{
 		spawns = arraycombine(level.spawn_start["allies"], level.spawn_start["axis"], 1, 0);
 		spawns = arraysort(spawns, node.origin);
 	}
-	
 	else
 	{
 		return 0;
@@ -1945,6 +1997,7 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		return 1;
 	}
+	
 	return 0;
 }
 
@@ -1963,5 +2016,6 @@ bot_nearest_node(origin)
 	{
 		return nodes[0];
 	}
+	
 	return undefined;
 }
