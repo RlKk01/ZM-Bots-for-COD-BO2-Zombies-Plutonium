@@ -204,7 +204,7 @@ bot_melee()
 	
 	foreach (z in cached)
 	{
-		if (isDefined(z) && isAlive(z) && DistanceSquared(self.origin, z.origin) <= 22500)
+		if (isDefined(z) && isAlive(z) && DistanceSquared(self.origin, z.origin) <= 40000)
 			nearby_count++;
 	}
 	if (nearby_count > 1)
@@ -282,6 +282,12 @@ perform_bot_melee(enemy, current_weapon, melee_weapon)
 	}
 	
 	self.bot.is_meleeing = undefined;
+	
+	// Fallback: re-enable attack if enemy is still valid
+	if (isDefined(self.bot.threat.entity) && isAlive(self.bot.threat.entity))
+	{
+		self allowattack(1);
+	}
 }
 
 perform_bot_melee_cleanup(current_weapon)

@@ -567,6 +567,7 @@ bot_simulate_revive(teammate)
             break;
         }
 
+		self allowattack(0);
         self lookat(teammate.origin);
         self pressusebutton(2); 
 
@@ -575,7 +576,7 @@ bot_simulate_revive(teammate)
 	
     // 2. RESTORE the weapon
     // We wait a tiny bit for the engine's internal revive script to finish its cleanup
-    wait 0.3;
+    wait 0.6;
 	
     if (isDefined(current_weapon) && current_weapon != "none")
     {
@@ -676,7 +677,14 @@ bot_teleport_think()
 	if(players.size == 0)
 		return;
 
-	if (getDvar("mapname") == "zm_transit")
+	if (getDvar("g_gametype") == "zstandard")
+	{
+		if(DistanceSquared(self.origin, players[0].origin) > 9000000 && players[0] IsOnGround())
+		{
+			self SetOrigin(players[0].origin + (0,60,0));
+		}
+	}
+	else if (getDvar("mapname") == "zm_transit")
 	{
 		if(DistanceSquared(self.origin, players[0].origin) > 3240000 && players[0] IsOnGround())
 		{
