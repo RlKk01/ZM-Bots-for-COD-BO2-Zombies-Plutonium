@@ -344,9 +344,6 @@ bot_spawn_init()
 	self.bot.threat.time_aim_interval = 0;
 	self.bot.threat.time_aim_correct = 0;
 	self.bot.threat.update_riotshield = 0;
-	
-	self.bot.is_meleeing = undefined;
-	self allowattack(1);
 }
 
 bot_main()
