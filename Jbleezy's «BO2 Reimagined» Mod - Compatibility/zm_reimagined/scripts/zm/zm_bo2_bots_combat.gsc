@@ -20,13 +20,13 @@ bot_combat_think(damage, attacker, direction)
 	{
 		if (!bot_can_do_combat())
 		{
-			wait 1; 
+			wait 0.05;
 			continue;
 		}
 		if(self atgoal("flee"))
 			self cancelgoal("flee");
 		
-		if(distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage))
+		if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
 		{
 			if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 			{
@@ -66,6 +66,7 @@ bot_combat_think(damage, attacker, direction)
 		}
 		//ADD OTHER COMBAT TASKS HERE.
 		self bot_combat_main();
+		self bot_melee();
 		self bot_pickup_powerup();
 		
 		if (!isDefined(self.bot.next_interact_time) || getTime() > self.bot.next_interact_time)
@@ -81,7 +82,7 @@ bot_combat_think(damage, attacker, direction)
 			self bot_revive_teammates();
 		}
 		
-		wait 0.05;
+		wait 0.1;
 	}
 }
 
@@ -183,10 +184,10 @@ bot_safely_interact_with_doors()
 		level.door_being_opened = true;
 		
 		// Try to open the door
-		self UseButtonPressed();
+		self pressusebutton(0.1);
 		
 		// Wait a bit for door to process
-		wait 1;
+		wait 0.05;
 		
 		// Reset flag so other bots can try later
 		level.door_being_opened = false;
@@ -397,9 +398,71 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	}
 }
 
+bot_melee()
+{
+	if (!isDefined(self.bot.next_melee_time))
+		self.bot.next_melee_time = 0;
+
+	if (GetTime() < self.bot.next_melee_time)
+		return;
+	
+	melee_wep = "knife_zm";
+	melee_damage = 150;
+	
+	needs_to_melee = false;
+	enemy = undefined;
+	
+	if (isDefined(self.bot.threat.entity) && isAlive(self.bot.threat.entity))
+	{
+		enemy = self.bot.threat.entity;
+		if (DistanceSquared(self.origin, enemy.origin) <= 4096)
+		{
+			if (enemy.health <= melee_damage)
+			{
+				needs_to_melee = true;
+			}
+		}
+	}
+
+	if (needs_to_melee)
+	{
+		current_weapon = self GetCurrentWeapon();
+		
+		if (isDefined(enemy))
+		{
+			self lookat(enemy.origin);
+		}
+		
+		self SwitchToWeapon(melee_wep);
+		
+		wait 0.1; 
+		
+		self allowattack(1);
+		
+		wait 0.5;
+		
+		self allowattack(0);
+		
+		if (isDefined(current_weapon) && current_weapon != "none" && current_weapon != "revive_weapon_zm" && current_weapon != melee_wep)
+		{
+			self SwitchToWeapon(current_weapon);
+		}
+		
+		wait 0.1;
+		if (self GetCurrentWeapon() == melee_wep)
+		{
+			weapons = self getweaponslistprimaries();
+			if (isDefined(weapons) && weapons.size > 0)
+				self switchtoweapon(weapons[0]);
+		}
+
+		self.bot.next_melee_time = GetTime() + 500;
+	}
+}
+
 bot_combat_dead(damage) //checked matches cerberus output
 {
-	wait 0.5;
+	wait 0.1;
 	self allowattack(0);
 	wait_endon(0.25, "damage");
 	self bot_clear_enemy();
