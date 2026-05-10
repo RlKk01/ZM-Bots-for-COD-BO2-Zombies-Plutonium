@@ -263,8 +263,8 @@ bot_perks()
 	wait 1;
 	while(1)
 	{
-		self SetNormalHealth(3000);
-		self SetmaxHealth(3000);
+		self SetNormalHealth(1500);
+		self SetmaxHealth(1500);
 		self waittill("player_revived");
 	}
 }
@@ -367,7 +367,7 @@ bot_main()
 			if(self hasgoal("wander"))
 				self cancelgoal("wander");
 			
-			wait 0.01;
+			wait 0.05;
 			continue;
 		}
 		
@@ -393,7 +393,7 @@ bot_main()
 		self bot_clear_debris();  // Added debris clearing functionality
 		self bot_buy_box();  // Added box buying functionality
 		
-		wait 0.5;
+		wait 0.1;
 	}
 }
 
@@ -526,6 +526,9 @@ bot_simulate_revive(teammate)
     if(self hasgoal("wander"))
         self cancelgoal("wander");
 	
+	if(self hasgoal("flee"))
+        self cancelgoal("flee");
+	
     self lookat(teammate.origin);
 	
     while(teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
@@ -536,9 +539,10 @@ bot_simulate_revive(teammate)
         }
 
         self lookat(teammate.origin);
+		self allowattack(0);
         self pressusebutton(2); 
 
-        wait 0.1;
+        wait 0.05;
     }
 	
     // 2. RESTORE the weapon
@@ -550,6 +554,7 @@ bot_simulate_revive(teammate)
         self switchtoweapon(current_weapon);
     }
 	
+	self allowattack(1);
     self.bot.is_reviving = false;
 }
 
@@ -701,7 +706,6 @@ bot_check_player_blocking()
             continue;
 		
         // Skip checks if the bot is currently reviving someone
-        // This ensures they stay perfectly still during the revive process
         if(is_true(self.bot.is_reviving))
             continue;
         
@@ -1012,7 +1016,7 @@ bot_buy_box()
                     return; // Finished grab attempt
                 }
                 // If not close enough, move towards it
-                else if (closestOpenBoxDist < 99999) // Detection range
+                else if (closestOpenBoxDist < 3000) // Detection range
                 {
                     if(!self hasgoal("boxGrab")) // Only set goal if not already moving
                     {
@@ -1077,12 +1081,10 @@ bot_buy_box()
 
         dist = Distance(self.origin, current_box.origin);
         interaction_dist = 150; // Distance to interact
-        detection_dist = 99999; // Distance to start moving towards
+        detection_dist = 3000; // Distance to start moving towards
 		
 		if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
 		{
-			dist = Distance(self.origin, current_box.origin);
-			interaction_dist = 150;
 			detection_dist = 800;
 		}
 
@@ -2091,21 +2093,24 @@ bot_update_wander()
 
 	for(;;)
 	{
-		if(self isremotecontrolling())
-		{
-			wait 0.5;
-			continue;
-		}
+		wait 0.1;
+		
+        if(is_true(self.bot.is_reviving) || (isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == self))
+            continue;
 
 		players = get_players();
+		
+		if(players.size == 0)
+            continue;
+		
 		player = players[0];
 		
-		if(player.size == 0)
-			continue;
+        if(!isDefined(player) || player maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+            continue;
 		
 		dist_sq = DistanceSquared(self.origin, player.origin);
 		
-		if(dist_sq > 1000000)
+		if(dist_sq > 1440000)
 		{
 			self.bot.is_following = true;
 		}
@@ -2151,7 +2156,6 @@ bot_update_wander()
 				}
 			}
 		}
-		wait 0.5;
 	}
 }
 
@@ -2175,7 +2179,7 @@ get_random_walkable_location(origin, range, player)
 		
 		tries ++;
 		
-		wait 0.1;
+		wait 0.05;
 	}
 }
 
