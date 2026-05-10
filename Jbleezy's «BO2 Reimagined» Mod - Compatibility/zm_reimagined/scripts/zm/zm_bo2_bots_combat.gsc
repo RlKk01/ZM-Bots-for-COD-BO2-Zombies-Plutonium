@@ -9,12 +9,6 @@ bot_combat_think(damage, attacker, direction)
 {
     self endon("disconnect");
     self endon("death");
-
-    if (self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-    {
-        self.bot.is_meleeing = undefined;
-        return;
-    }
     
     if (!bot_can_do_combat())
     {
@@ -45,42 +39,36 @@ bot_combat_think(damage, attacker, direction)
             }
         }
     }
+	
+	if(self GetCurrentWeapon() == "none")
+	{
+		return;
+	}
     
-    if(self GetCurrentWeapon() == "none")
-    {
-        return;
-    }
-    
-    sight = self bot_best_enemy();
+	sight = self bot_best_enemy();
 	
 	if(!isdefined(self.bot.threat.entity))
-    {
-        return;
-    }
-    
-    if (threat_dead())
-    {
-        self bot_combat_dead();
-        return;
-    }
+	{
+		return;
+	}
 	
-    if (!sight && !self bot_has_enemy())
-    {
-        self allowattack(0);
-        return;
-    }
-    
-    self bot_combat_main();
-    self bot_melee();
+	if (threat_dead())
+	{
+		self bot_combat_dead();
+		return;
+	}
+	
+	if (!sight && !self bot_has_enemy())
+	{
+		self allowattack(0);
+		return;
+	}
+		
+	self bot_combat_main();
 }
 
 bot_combat_main() //checked partially changed to match cerberus output changed at own discretion
 {
-	if (is_true(self.bot.is_meleeing))
-	{
-		return;
-	}
-
 	weapon = self getcurrentweapon();
 	
 	// Force bot to finish reloading until clip is full
@@ -168,137 +156,6 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 		self allowattack(self.stingerlockfinalized);
 		return;
 	}
-}
-
-bot_melee()
-{
-	if (!isDefined(self.bot.next_melee_time))
-		self.bot.next_melee_time = 0;
-
-	if (GetTime() < self.bot.next_melee_time)
-		return;
-	
-	if (is_true(self.bot.is_meleeing))
-		return;
-	
-	melee_weapon = "knife_zm";
-	enemy_health = 150;
-	
-	if (self HasWeapon("tazer_knuckles_zm"))
-	{
-		melee_weapon = "tazer_knuckles_zm";
-		enemy_health = 6000;
-	}
-	
-	else if (self HasWeapon("bowie_knife_zm"))
-	{
-		melee_weapon = "bowie_knife_zm";
-		enemy_health = 1000;
-	}
-	
-	needs_to_melee = false;
-	enemy = undefined;
-	
-	nearby_count = 0;
-	cached = get_cached_zombies();
-	
-	foreach (z in cached)
-	{
-		if (isDefined(z) && isAlive(z) && DistanceSquared(self.origin, z.origin) <= 40000)
-			nearby_count++;
-	}
-	if (nearby_count > 1)
-		return;
-	
-	if (isDefined(self.bot.threat.entity) && isAlive(self.bot.threat.entity))
-	{
-		enemy = self.bot.threat.entity;
-		
-		if (DistanceSquared(self.origin, enemy.origin) <= 4096)
-		{
-			if (enemy.health <= enemy_health)
-			{
-				needs_to_melee = true;
-			}
-		}
-	}
-
-	if (needs_to_melee && isDefined(enemy))
-	{
-		current_weapon = self GetCurrentWeapon();
-		
-		if (current_weapon == "none" || current_weapon == "revive_weapon_zm" || current_weapon == melee_weapon)
-			return;
-
-		self.bot.next_melee_time = GetTime() + 1500;
-		
-		self thread perform_bot_melee(enemy, current_weapon, melee_weapon);
-	}
-}
-
-perform_bot_melee(enemy, current_weapon, melee_weapon)
-{
-	self endon("disconnect");
-	self endon("death");
-	
-	self.bot.is_meleeing = true;
-	
-	self thread perform_bot_melee_cleanup(current_weapon);
-	
-	self allowattack(0);
-	
-	self SwitchToWeapon(melee_weapon);
-	
-	while(self GetCurrentWeapon() != melee_weapon)
-	{
-		wait 0.05;
-	}
-	
-	wait 0.1;
-	
-	if(isDefined(enemy) && isAlive(enemy) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-	{
-		self lookat(enemy.origin + (0, 0, 40));
-		
-		forward = anglesToForward(self getplayerangles());
-		
-		self setVelocity(self getVelocity() + (forward * 150));
-		
-		self allowattack(1);
-		
-		wait 0.6; 
-	}
-	
-	self allowattack(0);
-	
-	if (!self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-	{
-		self SwitchToWeapon(current_weapon);
-	
-		while(self GetCurrentWeapon() != current_weapon)
-		{
-			wait 0.05;
-		}
-	}
-	
-	self.bot.is_meleeing = undefined;
-	
-	// Fallback: re-enable attack if enemy is still valid
-	if (isDefined(self.bot.threat.entity) && isAlive(self.bot.threat.entity))
-	{
-		self allowattack(1);
-	}
-}
-
-perform_bot_melee_cleanup(current_weapon)
-{
-	self endon("disconnect");
-	
-	self waittill("death");
-	
-	self.bot.is_meleeing = undefined;
-	
-	self allowattack(0);
 }
 
 bot_combat_dead(damage) //checked matches cerberus output
