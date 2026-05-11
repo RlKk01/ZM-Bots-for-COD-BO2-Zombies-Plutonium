@@ -1204,10 +1204,10 @@ bot_get_weapon_score(weapon)
 	
 	// Weapons that it shouldn't be take it from the box
 	if(IsSubStr(weapon, "knife_ballistic") || 
-		IsSubStr(boxWeapon, "willy_pete") || 
-		IsSubStr(boxWeapon, "time_bomb") || 
-		IsSubStr(boxWeapon, "emp_grenade") || 
-		IsSubStr(boxWeapon, "cymbal_monkey"))
+		IsSubStr(weapon, "willy_pete") || 
+		IsSubStr(weapon, "time_bomb") || 
+		IsSubStr(weapon, "emp_grenade") || 
+		IsSubStr(weapon, "cymbal_monkey"))
 			return 0;
 
     // Unknown/Custom weapons default to a mid-tier score
