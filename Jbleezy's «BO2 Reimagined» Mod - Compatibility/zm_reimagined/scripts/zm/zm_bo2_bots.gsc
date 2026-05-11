@@ -281,6 +281,7 @@ bot_spawn()
     self bot_spawn_init();
     self thread bot_main();
     self thread bot_check_player_blocking();
+	self thread bot_weapon_failsafe_monitor();
 }
 
 bot_perks()
@@ -844,8 +845,10 @@ bot_pack_gun()
 					return;
 				
 				self maps\mp\zombies\_zm_score::minus_to_player_score(5000);
-				self TakeAllWeapons();
+				self TakeWeapon(weapon); // Only take the gun they are currently holding
 				self GiveWeapon(upgrade_name);
+				self GiveMaxAmmo(upgrade_name); // Good practice for PaP
+				self SwitchToWeapon(upgrade_name); // Force them to pull it out
 				self SetSpawnWeapon(upgrade_name);
 				return;
 			}
@@ -1308,8 +1311,10 @@ bot_buy_wallbuy()
 	
 	self cancelgoal("weaponBuy");
 	self maps\mp\zombies\_zm_score::minus_to_player_score(weaponToBuy.trigger_stub.cost);
-	self TakeAllWeapons();
+	self TakeWeapon(weapon); // Only take the gun they are currently holding
 	self GiveWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
+	self GiveMaxAmmo(weaponToBuy.trigger_stub.zombie_weapon_upgrade); 
+	self SwitchToWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade); // Force them to pull it out
 	self SetSpawnWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
 }
 
@@ -1336,6 +1341,41 @@ bot_best_gun(buyingweapon, currentweapon)
         return true;
         
     return false;
+}
+
+bot_weapon_failsafe_monitor()
+{
+    self endon("death");
+    self endon("disconnect");
+    
+    for(;;)
+    {
+        wait 1; 
+        
+        // Skip checking if the bot is reviving or doing box stuff
+        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+            continue;
+
+        weapon = self GetCurrentWeapon();
+        primaries = self GetWeaponsListPrimaries();
+        
+        // If they somehow have no current weapon, or their primary inventory is completely empty
+        if (weapon == "none" || !isDefined(primaries) || primaries.size == 0)
+        {
+            fallback_weapon = "hk416_zm";
+            
+            // Check if the map is Origins
+            if (getDvar("mapname") == "zm_tomb")
+            {
+                fallback_weapon = "mp44_zm";
+            }
+            
+            self GiveWeapon(fallback_weapon);
+            self GiveMaxAmmo(fallback_weapon);
+            self SwitchToWeapon(fallback_weapon);
+            self SetSpawnWeapon(fallback_weapon);
+        }
+    }
 }
 
 bot_buy_door()
