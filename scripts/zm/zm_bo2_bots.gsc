@@ -2377,6 +2377,23 @@ bot_get_closest_enemy(origin)
 	return closestEnemy;
 }
 
+bot_update_weapon()
+{
+	weapon = self GetCurrentWeapon();
+	
+	primaries = self getweaponslistprimaries();
+	
+	foreach (primary in primaries)
+	{
+		if (primary != weapon)
+		{
+			self switchtoweapon(primary);
+			return;
+		}
+		i++;
+	}
+}
+
 bot_give_ammo()
 {
 	self endon("disconnect");

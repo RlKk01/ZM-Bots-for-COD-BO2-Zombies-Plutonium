@@ -47,7 +47,7 @@ bot_combat_think(damage, attacker, direction)
     
 	sight = self bot_best_enemy();
 	
-	if(!isdefined(self.bot.threat.entity))
+	if(!isdefined(self.bot.threat.entity) && !isAlive(self.bot.threat.entity))
 	{
 		return;
 	}
@@ -226,6 +226,75 @@ bot_should_hip_fire() //checked matches cerberus output
 	return distsq < (distcheck * distcheck);
 }
 
+bot_patrol_near_enemy(damage, attacker, direction) //checked matches cerberus output
+{
+	if (isDefined(attacker))
+	{
+		self bot_lookat_entity(attacker);
+	}
+	
+	if (!isDefined(attacker))
+	{
+		attacker = self bot_get_closest_enemy(self.origin);
+	}
+	
+	if (!isDefined(attacker))
+	{
+		return;
+	}
+	
+	node = bot_nearest_node(attacker.origin);
+	
+	if (!isDefined(node))
+	{
+		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "Path", 8);
+		
+		if (nodes.size)
+		{
+			node = nodes[0];
+		}
+	}
+	
+	if (isDefined(node))
+	{
+		if (isDefined(damage))
+		{
+			self addgoal(node, 24, 4, "enemy_patrol");
+			return;
+		}
+		else
+		{
+			self addgoal(node, 24, 2, "enemy_patrol");
+		}
+	}
+}
+
+bot_lookat_entity(entity) //checked matches cerberus output
+{
+	if (isplayer(entity) && entity getstance() != "prone")
+	{
+		if (distancesquared(self.origin, entity.origin) < 65536)
+		{
+			origin = entity getcentroid() + vectorScale((0, 0, 1), 10);
+			
+			self lookat(origin);
+			
+			return;
+		}
+	}
+	
+	offset = target_getoffset(entity);
+	
+	if (isDefined(offset))
+	{
+		self lookat(entity.origin + offset);
+	}
+	else
+	{
+		self lookat(entity getcentroid());
+	}
+}
+
 bot_update_lookat(origin, frac) //checked matches cerberus output
 {
     if (!isDefined(self.bot.threat.entity))
@@ -323,6 +392,60 @@ bot_on_target(aim_target, radius) //checked matches cerberus output
 	return 0;
 }
 
+bot_has_lmg() //checked changed at own discretion
+{
+	if (bot_has_weapon_class("mg"))
+	{
+		return 1;
+	}
+	
+	return 0;
+}
+
+bot_has_weapon_class(class) //checked changed at own discretion
+{
+	if (self isreloading())
+	{
+		return 0;
+	}
+	
+	weapon = self getcurrentweapon();
+	
+	if (weapon == "none")
+	{
+		return 0;
+	}
+	
+	if (weaponclass(weapon) == class)
+	{
+		return 1;
+	}
+	
+	return 0;
+}
+
+bot_can_reload() //checked changed to match cerberus output
+{
+	weapon = self getcurrentweapon();
+	
+	if (weapon == "none")
+	{
+		return 0;
+	}
+	
+	if (!self getweaponammostock(weapon))
+	{
+		return 0;
+	}
+	
+	if (self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
+	{
+		return 0;
+	}
+	
+	return 1;
+}
+
 bot_best_enemy() //checked partially changed to match cerberus output
 {
 	enemies = get_cached_zombies();
@@ -354,6 +477,125 @@ bot_best_enemy() //checked partially changed to match cerberus output
 		i++;
 	}
 	return 0;
+}
+
+bot_weapon_ammo_frac() //checked matches cerberus output
+{
+	if (self isreloading() || self isswitchingweapons())
+	{
+		return 0;
+	}
+	
+	weapon = self getcurrentweapon();
+	
+	if (weapon == "none")
+	{
+		return 1;
+	}
+	
+	total = weaponclipsize(weapon);
+	
+	if (total <= 0)
+	{
+		return 1;
+	}
+	
+	current = self getweaponammoclip(weapon);
+	
+	return current / total;
+}
+
+bot_select_weapon() //checked partially changed to match cerberus output
+{
+	if (self isthrowinggrenade() || self isswitchingweapons() || self isreloading())
+	{
+		return;
+	}
+	
+	if (!self isonground())
+	{
+		return;
+	}
+	
+	ent = self.bot.threat.entity;
+	
+	if (!isDefined(ent))
+	{
+		return;
+	}
+	
+	primaries = self getweaponslistprimaries();
+	weapon = self getcurrentweapon();
+	stock = self getweaponammostock(weapon);
+	clip = self getweaponammoclip(weapon);
+	
+	if (weapon == "none")
+	{
+		return;
+	}
+	
+	if (weapon == "fhj18_mp" && !target_istarget(ent))
+	{
+		foreach (primary in primaries)
+		{
+			if (primary != weapon)
+			{
+				self switchtoweapon(primary);
+				return;
+			}
+		}
+		return;
+	}
+	
+	if (!clip)
+	{
+		if (stock)
+		{
+			if (weaponhasattachment(weapon, "fastreload"))
+			{
+				return;
+			}
+		}
+		
+		i = 0;
+		
+		while (i < primaries.size)
+		{
+			if (primaries[ i ] == weapon || primaries[i] == "fhj18_mp")
+			{
+				i++;
+				continue;
+			}
+			
+			if (self getweaponammoclip(primaries[i]))
+			{
+				self switchtoweapon(primaries[i]);
+				return;
+			}
+			
+			i++;
+		}
+		
+		if (self bot_has_lmg())
+		{
+			i = 0;
+			
+			while (i < primaries.size)
+			{
+				if (primaries[i] == weapon || primaries[i] == "fhj18_mp")
+				{
+					i++;
+					continue;
+				}
+				else
+				{
+					self switchtoweapon(primaries[i]);
+					return;
+				}
+				i++;
+			}
+		}
+	}
 }
 
 bot_can_do_combat() //checked matches cerberus output
