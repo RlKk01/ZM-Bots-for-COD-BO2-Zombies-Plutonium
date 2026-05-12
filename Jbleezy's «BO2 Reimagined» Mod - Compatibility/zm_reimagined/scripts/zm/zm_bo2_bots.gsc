@@ -368,6 +368,10 @@ bot_main()
 		
 		if(isDefined(self.bot.is_using_box) && self.bot.is_using_box)
 		{
+			// Actively stop all shooting/aiming every tick while using the box
+			self allowattack(0);
+			self pressads(0);
+			
 			// Force stop any movement goals every frame
 			if(self hasgoal("boxBuy"))
 				self cancelgoal("boxBuy");
@@ -840,9 +844,19 @@ bot_pack_gun()
 				weapon = self GetCurrentWeapon();
 				upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 				
+				if(isSubStr(weapon, "blunder") && !isSubStr(weapon, "upgraded") && weapon == upgrade_name)
+					upgrade_name = "blundergat_upgraded_zm";
+				
+				if(isSubStr(weapon, "slipgun") && !isSubStr(weapon, "upgraded") && weapon == upgrade_name)
+					upgrade_name = "slipgun_upgraded_zm";
+				
 				// Check if weapon is already upgraded (prevent double PaP)
 				if(weapon == upgrade_name)
 					return;
+				
+				// Stop shooting and aiming before the weapon swap to prevent losing the weapon
+				self allowattack(0);
+				self pressads(0);
 				
 				self maps\mp\zombies\_zm_score::minus_to_player_score(5000);
 				self TakeWeapon(weapon); // Only take the gun they are currently holding
@@ -984,6 +998,11 @@ bot_buy_box()
                 current_box.chest_user = self; 
                 self.bot.current_box = current_box;
                 self.bot.is_using_box = true;
+				
+				// Stop shooting immediately upon deciding to use the box
+				self allowattack(0);
+				self pressads(0);
+				
                 self.bot.waiting_for_box_animation = true;
                 self.bot.box_payment_time = GetTime();
 
@@ -1109,10 +1128,11 @@ bot_monitor_box_animation(box)
                     box.unitrigger_stub.trigger notify("trigger", self);
                 else if(isDefined(box.use_trigger))
                     box.use_trigger notify("trigger", self);
-                else
-                    box notify("trigger", self);
-                    
-                self UseButtonPressed();
+				else
+				{
+					box notify("trigger", self);
+					self UseButtonPressed();
+				}
                 wait 0.5;
                 
                 // Check if weapon was actually taken
@@ -1310,6 +1330,11 @@ bot_buy_wallbuy()
 	}
 	
 	self cancelgoal("weaponBuy");
+	
+	// Stop shooting and aiming before the weapon swap to prevent losing the weapon
+	self allowattack(0);
+	self pressads(0);
+	
 	self maps\mp\zombies\_zm_score::minus_to_player_score(weaponToBuy.trigger_stub.cost);
 	self TakeWeapon(weapon); // Only take the gun they are currently holding
 	self GiveWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
@@ -1362,7 +1387,18 @@ bot_weapon_failsafe_monitor()
         // If they somehow have no current weapon, or their primary inventory is completely empty
         if (weapon == "none" || !isDefined(primaries) || primaries.size == 0)
         {
-            fallback_weapon = "hk416_zm";
+            // Wait a short moment to rule out a mid-transition false positive
+            // (e.g. right after a box grab when the engine is switching weapons)
+            wait 0.5;
+
+            // Re-check after the buffer
+            weapon = self GetCurrentWeapon();
+            primaries = self GetWeaponsListPrimaries();
+
+            if (weapon != "none" && isDefined(primaries) && primaries.size > 0)
+                continue; // Weapon transition completed fine, no fallback needed
+
+            fallback_weapon = "galil_zm";
             
             // Check if the map is Origins
             if (getDvar("mapname") == "zm_tomb")
@@ -1778,7 +1814,15 @@ fast_array_contains(array, value)
 
 bot_should_pack()
 {
-	if(maps\mp\zombies\_zm_weapons::can_upgrade_weapon(self GetCurrentWeapon()))
+	weapon = self GetCurrentWeapon();
+
+	if(maps\mp\zombies\_zm_weapons::can_upgrade_weapon(weapon))
+		return 1;
+	
+	if(isSubStr(weapon, "blunder") && !isSubStr(weapon, "upgraded"))
+		return 1;
+	
+	if(isSubStr(weapon, "slipgun") && !isSubStr(weapon, "upgraded"))
 		return 1;
 	
 	return 0;

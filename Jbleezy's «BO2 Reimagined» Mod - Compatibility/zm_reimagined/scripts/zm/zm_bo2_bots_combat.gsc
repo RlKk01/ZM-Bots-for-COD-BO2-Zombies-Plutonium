@@ -7,50 +7,41 @@
 
 bot_combat_think(damage, attacker, direction)
 {
-    self endon("disconnect");
-    self endon("death");
-    
-    if (!bot_can_do_combat())
-    {
-        return;
-    }
+	if (!bot_can_do_combat())
+		return;
 	
-    if(self atgoal("flee"))
-        self cancelgoal("flee");
+	if(self atgoal("flee"))
+		self cancelgoal("flee");
 
-    if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
-    {
-        if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
-        {
-            self.bot.next_flee_scan = getTime() + 2000;
-            nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
+	if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	{
+		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
+		{
+			self.bot.next_flee_scan = getTime() + 2000;
+			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
             
-            nearest = bot_nearest_node(self.origin);
-            if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
-            {
-                foreach (node in nodes)
-                {
-                    if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
-                    {
-                        self addgoal(node.origin, 24, 4, "flee");
-                        break;
-                    }
-                }
-            }
-        }
-    }
+			nearest = bot_nearest_node(self.origin);
+			if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
+			{
+				foreach (node in nodes)
+				{
+					if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
+					{
+						self addgoal(node.origin, 24, 4, "flee");
+						break;
+					}
+				}
+			}
+		}
+	}
 	
 	if(self GetCurrentWeapon() == "none")
-	{
 		return;
-	}
     
 	sight = self bot_best_enemy();
 	
 	if(!isdefined(self.bot.threat.entity) && !isAlive(self.bot.threat.entity))
-	{
 		return;
-	}
 	
 	if (threat_dead())
 	{
@@ -97,6 +88,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	{
 		ads = 1;
 	}
+	
 	if (ads)
 	{
 		self pressads(1);
@@ -601,6 +593,11 @@ bot_select_weapon() //checked partially changed to match cerberus output
 bot_can_do_combat() //checked matches cerberus output
 {
 	if (self ismantling() || self isonladder())
+	{
+		return 0;
+	}
+	
+	if (is_true(self.bot.is_using_box))
 	{
 		return 0;
 	}
