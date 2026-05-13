@@ -52,6 +52,7 @@ bot_combat_think(damage, attacker, direction)
 	if (!sight && !self bot_has_enemy())
 	{
 		self allowattack(0);
+		self pressads(0);
 		return;
 	}
 		

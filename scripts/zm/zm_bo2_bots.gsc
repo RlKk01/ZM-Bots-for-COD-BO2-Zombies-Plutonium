@@ -88,6 +88,13 @@ init()
 		
         wait 1;
     }
+	
+    // Thread manual teleport monitor for each real (non-bot) player
+    foreach(player in get_players())
+    {
+        if(!isDefined(player.pers["isBot"]))
+            player thread manual_bot_teleport_monitor();
+    }
 }
 
 // Vending machine cache
@@ -407,7 +414,6 @@ bot_main()
 		
 		self bot_combat_think(damage, attacker, direction);
 		self bot_update_lookat();
-		self bot_teleport_think();
 		self bot_stand_fix();
 		
 		if(is_true(level.using_bot_weapon_logic))
@@ -492,37 +498,56 @@ bot_buy_perks()
 
 bot_revive_teammates()
 {
-	if(isDefined(self.bot.next_revive_check) && GetTime() < self.bot.next_revive_check)
-		return;
+    if(isDefined(self.bot.next_revive_check) && GetTime() < self.bot.next_revive_check)
+        return;
         
-    self.bot.next_revive_check = GetTime() + 2000;
-	
+    self.bot.next_revive_check = GetTime() + 1000;
+    
     if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
         if(self hasgoal("revive"))
+        {
+            // Clear claim if the bot stops going for the revive
+            if(isDefined(self.bot.revive_target))
+                self.bot.revive_target.revive_claimed = undefined;
+                
             self cancelgoal("revive");
+        }
             
         self.bot.is_reviving = false;
         return;
     }
-	
-	if(is_true(self.bot.is_reviving))
-		return;
-	
-	if(!self hasgoal("revive"))
-	{
-		teammate = self get_closest_downed_teammate();
+    
+    if(is_true(self.bot.is_reviving))
+        return;
+    
+    if(!self hasgoal("revive"))
+    {
+        teammate = self get_closest_downed_teammate();
+        
+        if(!isdefined(teammate))
+            return;
 		
-		if(!isdefined(teammate))
-			return;
-		
-		self AddGoal(teammate.origin, 50, 3, "revive");
-	}
-	else
-	{
+        // CLAIM the teammate so other bots ignore them
+        teammate.revive_claimed = self;
+        self.bot.revive_target = teammate; 
+        
+        self AddGoal(teammate.origin, 50, 3, "revive");
+    }
+    else
+    {
+        // If the teammate we claimed somehow got revived or died before we got there
+        if(isDefined(self.bot.revive_target) && !self.bot.revive_target maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+        {
+             self.bot.revive_target.revive_claimed = undefined;
+             self.bot.revive_target = undefined;
+             self cancelgoal("revive");
+             return;
+        }
+	
         if(self AtGoal("revive") || DistanceSquared(self.origin, self GetGoal("revive")) < 5625)
         {
-            teammate = self get_closest_downed_teammate();
+            teammate = self.bot.revive_target;
             
             if(!isdefined(teammate))
             {
@@ -531,81 +556,133 @@ bot_revive_teammates()
             }
             self thread bot_simulate_revive(teammate);
         }
-	}
+    }
 }
 
 bot_simulate_revive(teammate)
 {
     self endon("death");
     self endon("disconnect");
-	
+    
     teammate endon("death");
     teammate endon("disconnect");
-	
+    
     // 1. SAVE the current weapon so we can give it back later
     current_weapon = self getCurrentWeapon();
-	
-    // If for some reason they have no weapon, let's find one from their inventory
+    
     if (current_weapon == "none" || current_weapon == "revive_weapon_zm")
     {
         weapons = self getweaponslistprimaries();
         if (isDefined(weapons) && weapons.size > 0)
             current_weapon = weapons[0];
     }
-
-    // Lock bot state
+    
+    // Lock bot and teammate state
     self.bot.is_reviving = true;
+    teammate.being_revived = true;
+    
+    // Watcher runs on level so it won't be killed by bot/teammate endon events
+    level thread bot_revive_cleanup_watcher(self, teammate);
+    
     self cancelgoal("revive");
-
+	
     if(self hasgoal("wander"))
         self cancelgoal("wander");
-	
-	if(self hasgoal("flee"))
+    
+    if(self hasgoal("flee"))
         self cancelgoal("flee");
-	
+    
     self lookat(teammate.origin);
-	
+    
     while(teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
+        self allowattack(0);
+		self pressads(0);
+	
         if(DistanceSquared(self.origin, teammate.origin) > 10000)
-        {
             break;
-        }
-
-		self allowattack(0);
+        
         self lookat(teammate.origin);
         self pressusebutton(2); 
-
         wait 0.05;
     }
-	
+    
     // 2. RESTORE the weapon
-    // We wait a tiny bit for the engine's internal revive script to finish its cleanup
     wait 0.6;
-	
+    
     if (isDefined(current_weapon) && current_weapon != "none")
-    {
         self switchtoweapon(current_weapon);
-    }
-	
+    
+    // Clear flags on normal exit
+    teammate.being_revived = false;
     self.bot.is_reviving = false;
+}
+
+// Runs on level so it survives bot/teammate death or disconnect.
+// Clears being_revived immediately if the reviving bot dies mid-revive.
+bot_revive_cleanup_watcher(reviving_bot, teammate)
+{
+    while(true)
+    {
+        wait 0.1;
+        
+        // If the bot is gone or dead, clear both the claim and the reviving flag
+        if(!isDefined(reviving_bot) || !isAlive(reviving_bot))
+        {
+            if(isDefined(teammate))
+            {
+                teammate.being_revived = false;
+                teammate.revive_claimed = undefined;
+            }
+            return;
+        }
+        
+        // If the teammate is gone or back up, clear everything
+        if(!isDefined(teammate) || !teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+        {
+            if(isDefined(teammate))
+            {
+                teammate.being_revived = false;
+                teammate.revive_claimed = undefined;
+            }
+            return;
+        }
+        
+        // If the bot finishes the revive or cancels it
+        if(!is_true(reviving_bot.bot.is_reviving) && !reviving_bot hasgoal("revive"))
+        {
+            if(isDefined(teammate))
+                teammate.revive_claimed = undefined;
+            return;
+        }
+    }
 }
 
 get_closest_downed_teammate()
 {
-	if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand())
-		return;
-	
-	downed_players = [];
-	
-	foreach(player in get_players())
-	{
-		if(player maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			downed_players[downed_players.size] = player;
-	}
-	downed_players = arraysort(downed_players, self.origin);
-	
-	return downed_players[0];
+    if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand())
+        return;
+    
+    downed_players = [];
+    
+    foreach(player in get_players())
+    {
+        // Skip players already being revived by another bot
+        if(player maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !is_true(player.being_revived))
+        {
+            if(!isDefined(player.revive_claimed) || player.revive_claimed == self)
+            {
+                downed_players[downed_players.size] = player;
+            }
+        }
+    }
+    
+    if(downed_players.size == 0)
+        return;
+    
+    downed_players = arraysort(downed_players, self.origin);
+    
+    return downed_players[0];
 }
 
 bot_pickup_powerup()
@@ -625,6 +702,10 @@ bot_pickup_powerup()
 
 	foreach(powerup in powerups)
 	{
+        // Skip checks if the bot is currently reviving someone
+        if(is_true(self.bot.is_reviving))
+            continue;
+		
 		// Make the bot avoid picking up the nuke powerup
 		if(isDefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
 			continue;
@@ -666,57 +747,42 @@ is_in_cell_block(origin)
 	return false;
 }
 
-bot_teleport_think()
+manual_bot_teleport_monitor()
 {
-	self endon("death");
-	self endon("disconnect");
-	level endon("end_game");
+    self endon("death");
+    self endon("disconnect");
+    level endon("end_game");
 	
-    if(isDefined(self.bot.next_teleport_check) && GetTime() < self.bot.next_teleport_check)
-        return;
+    self notifyOnPlayerCommand("teleport_bots_pressed", "+actionslot 3");
 	
-    self.bot.next_teleport_check = GetTime() + 1000;
-	
-	players = get_players();
-	
-	if(players.size == 0)
-		return;
-
-	if (getDvar("g_gametype") == "zstandard")
-	{
-		if(DistanceSquared(self.origin, players[0].origin) > 9000000 && players[0] IsOnGround())
-		{
-			self SetOrigin(players[0].origin + (0,60,0));
-		}
-	}
-	else if (getDvar("mapname") == "zm_transit")
-	{
-		if(DistanceSquared(self.origin, players[0].origin) > 3240000 && players[0] IsOnGround())
-		{
-			self SetOrigin(players[0].origin + (0,60,0));
-		}
-	}
-	else if (getDvar("mapname") == "zm_highrise")
-	{
-		if(DistanceSquared(self.origin, players[0].origin) > 1440000 && players[0] IsOnGround())
-		{
-			self SetOrigin(players[0].origin + (0,60,0));
-		}
-	}
-	else if (getDvar("mapname") == "zm_buried")
-	{
-		if(DistanceSquared(self.origin, players[0].origin) > 9000000 && players[0] IsOnGround())
-		{
-			self SetOrigin(players[0].origin + (0,60,0));
-		}
-	}
-	else if (getDvar("mapname") == "zm_prison")
-	{
-		if(DistanceSquared(self.origin, players[0].origin) > 156250000 && players[0] IsOnGround())
-		{
-			self SetOrigin(players[0].origin + (0,60,0));
-		}
-	}
+    while(true)
+    {
+        // Wait until the player presses the keybind
+        self waittill("teleport_bots_pressed");
+		
+        // Safety check: Only teleport bots if the player is safely on the ground
+        if(self IsOnGround())
+        {
+            players = get_players();
+            
+            foreach(player in players)
+            {
+                if(isDefined(player.bot))
+                {
+                    // Teleport the bot to the player with a slight Z offset
+                    player SetOrigin(self.origin + (0, 50, 0));
+                }
+            }
+            
+            self iprintln("Bots Teleported!");
+        }
+        else 
+        {
+            self iprintln("You must be on the ground to teleport bots.");
+        }
+        // Small wait to prevent the script from spamming if the button is held down
+        wait 0.5;
+    }
 }
 
 bot_stand_fix()
@@ -913,7 +979,8 @@ bot_buy_box()
 		// Don't spend points on the box if they have wonder weapons
 		if(isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
 		   isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun") || 
-		   isSubStr(weapon, "mark2"))
+		   isSubStr(weapon, "thunder") || isSubStr(weapon, "tesla") || 
+		   isSubStr(weapon, "freezegun") || isSubStr(weapon, "mark2"))
 		{
 			self CancelGoal("boxBuy");
 			return;
@@ -1433,6 +1500,9 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     // Always take wonder weapons
     if(IsSubStr(boxWeapon, "ray_gun") || 
        IsSubStr(boxWeapon, "raygun_mark2") || 
+	   IsSubStr(boxWeapon, "freezegun") || 
+	   IsSubStr(boxWeapon, "tesla") || 
+	   IsSubStr(boxWeapon, "thunder") || 
 	   IsSubStr(boxWeapon, "slipgun") || 
 	   IsSubStr(boxWeapon, "slowgun") || 
 	   IsSubStr(boxWeapon, "blundergat") || 
@@ -1445,13 +1515,13 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     }
     
     // Define weapon tiers for better decision making
-    tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "raygun_mark2", "ray_gun");
+    tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "thunder", "tesla", "freezegun", "raygun_mark2", "ray_gun");
 	tier2_weapons = array("usrpg", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
 	tier3_weapons = array("ksg", "870mcs", "lsat", "hamr", "rpd", "mg08", "scar", "hk416", "an94", "galil", "ak47", "mp44", "evoskorpion");
-    tier4_weapons = array("srm1216", "saiga12", "svu", "tar21", "pdw57", "thompson", "fivesevendw", "judge");
-    tier5_weapons = array("dsr50", "barretm82", "type95", "xm8", "m16", "mp5k", "ak74u_extclip", "mp40_stalker", "beretta93r_extclip", "rnma");
-    tier6_weapons = array("fnfal", "qcw05", "ak74u", "mp40", "kard", "beretta93r", "fiveseven", "python");
-	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "uzi", "m1911", "c96", "knife_ballistic");
+    tier4_weapons = array("srm1216", "saiga12", "svu", "tar21", "pdw57", "mp5k", "uzi", "ak74u_extclip", "ak74u", "thompson", "mp40_stalker", "mp40", "fivesevendw", "judge");
+    tier5_weapons = array("dsr50", "barretm82", "type95", "xm8", "m16", "beretta93r_extclip", "rnma");
+    tier6_weapons = array("fnfal", "qcw05", "kard", "beretta93r", "fiveseven", "python");
+	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "m1911", "c96", "knife_ballistic");
     
     // Track if current weapon is in specific tier
     currentIsTier1 = false;
@@ -1796,7 +1866,8 @@ bot_buy_wallbuy()
 		isSubStr(weapon, "m16") || isSubStr(weapon, "ak47") || isSubStr(weapon, "mp44") || 
 		
 		isSubStr(weapon, "evoskorpion") || isSubStr(weapon, "pdw57") || 
-		isSubStr(weapon, "mp5k") || isSubStr(weapon, "thompson") || 
+		isSubStr(weapon, "mp5k") || isSubStr(weapon, "uzi") || isSubStr(weapon, "ak74u_extclip") || 
+		isSubStr(weapon, "thompson") || isSubStr(weapon, "mp40_stalker") || 
 		
 		isSubStr(weapon, "dsr50") || isSubStr(weapon, "svu") || isSubStr(weapon, "barrett") || 
 		isSubStr(weapon, "fivesevendw") || isSubStr(weapon, "judge") || isSubStr(weapon, "rnma"))
@@ -1944,6 +2015,9 @@ bot_buy_door()
         // Find the closest valid door
         closestDoor = undefined;
         closestDistSq = 90000; // Reduced max distance for realism
+		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			return;
 
         foreach(door in doors)
         {
@@ -2027,6 +2101,9 @@ bot_clear_debris()
         // Find the closest valid debris pile
         closestDebris = undefined;
         closestDistSq = 250000; // Reduced max distance for realism
+		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			return;
         
         foreach(pile in debris)
         {
