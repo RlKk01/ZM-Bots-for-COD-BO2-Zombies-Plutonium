@@ -474,7 +474,7 @@ bot_revive_teammates()
     if(isDefined(self.bot.next_revive_check) && GetTime() < self.bot.next_revive_check)
         return;
         
-    self.bot.next_revive_check = GetTime() + 500;
+    self.bot.next_revive_check = GetTime() + 2000;
     
     if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
