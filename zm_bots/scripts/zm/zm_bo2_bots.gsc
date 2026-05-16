@@ -792,18 +792,30 @@ manual_bot_teleport_monitor()
         // Safety check: Only teleport bots if the player is safely on the ground
         if(self IsOnGround())
         {
+            // Collect all bots first
+            bots_to_teleport = [];
             players = get_players();
             
             foreach(player in players)
             {
                 if(isDefined(player.bot))
-                {
-                    // Teleport the bot to the player with a slight Z offset
-                    player SetOrigin(self.origin + (0, 50, 0));
-                }
+                    bots_to_teleport[bots_to_teleport.size] = player;
             }
             
-            self iprintln("Bots Teleported!");
+            if(bots_to_teleport.size > 0)
+            {
+                // Spread offsets so bots don't stack on each other
+                offsets = [];
+                offsets[0] = (50,   0,  0);
+                offsets[1] = (-50,  0,  0);
+                offsets[2] = (0,   50,  0);
+                offsets[3] = (0,  -50,  0);
+                
+                teleport_player = self; // Capture caller for the thread
+                
+                // Thread the staggered teleport so the monitor loop stays responsive
+                teleport_player thread bot_staggered_teleport(bots_to_teleport, offsets);
+            }
         }
         else 
         {
@@ -812,6 +824,36 @@ manual_bot_teleport_monitor()
         // Small wait to prevent the script from spamming if the button is held down
         wait 0.5;
     }
+}
+
+bot_staggered_teleport(bots_to_teleport, offsets)
+{
+    self endon("death");
+    self endon("disconnect");
+    level endon("end_game");
+    
+    teleported = 0;
+    
+    for(i = 0; i < bots_to_teleport.size; i++)
+    {
+        bot = bots_to_teleport[i];
+        
+        if(!isDefined(bot))
+            continue;
+        
+        // Pick the offset for this bot, cycling back if more bots than offsets
+        offset = offsets[i % offsets.size];
+        
+        bot SetOrigin(self.origin + offset);
+        teleported++;
+        
+        // Cooldown between each bot teleport (skip wait after the last one)
+        if(i < bots_to_teleport.size - 1)
+            wait 0.4;
+    }
+    
+    if(teleported > 0)
+        self iprintln("Bots Teleported! (" + teleported + "/" + bots_to_teleport.size + ")");
 }
 
 bot_stand_fix()
@@ -2314,7 +2356,7 @@ bot_update_wander()
 		
         if(is_true(self.bot.is_reviving) || (isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == self))
             continue;
-
+		
 		players = get_players();
 		
 		if(players.size == 0)
@@ -2344,6 +2386,12 @@ bot_update_wander()
 		}
 		else
 		{
+			if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+				continue;
+			
+			if(self HasGoal("wander") && !isdefined(self.bot.threat.entity) && !isAlive(self.bot.threat.entity))
+				self pressads(0);
+			
 			if(!isDefined(self.bot.last_wander_pos))
 			{
 				self.bot.last_wander_pos = self.origin;
