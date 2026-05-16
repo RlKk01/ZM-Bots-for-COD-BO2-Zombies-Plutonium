@@ -230,6 +230,7 @@ bot_set_skill()
 	setdvar("bot_MeleeDist", "70");
 	setdvar("bot_YawSpeed", "4");
 	setdvar("bot_SprintDistance", "256");
+	setdvar("bg_playerCollisionEjectSpeed", "0");
 }
 
 spawn_bot()
@@ -294,16 +295,24 @@ bot_spawn()
 
 bot_perks()
 {
-	self endon("disconnect");
-	self endon("death");
-	
-	wait 1;
-	while(1)
-	{
-		self SetNormalHealth(1500);
-		self SetmaxHealth(1500);
-		self waittill("player_revived");
-	}
+    self endon("disconnect");
+    self endon("death");
+
+    wait 1;
+    while(1)
+    {
+        if(self hasPerk("specialty_armorvest"))
+        {
+            self SetNormalHealth(3000);
+            self SetMaxHealth(3000);
+        }
+        else
+        {
+            self SetNormalHealth(1500);
+            self SetMaxHealth(1500);
+        }
+        wait 1;
+    }
 }
 
 bot_perks_origins()
@@ -319,6 +328,7 @@ bot_perks_origins()
 			self SetPerk("specialty_rof");
 			self SetPerk("specialty_flakjacket");
 			self SetPerk("specialty_deadshot");
+			
 			self waittill("player_revived");
 		}
 	}
@@ -452,13 +462,26 @@ bot_buy_perks()
 		
 		if(level.perk_purchase_limit <= 5)
 		{
-			perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_flakjacket", "specialty_grenadepulldeath");
-			costs = array(1500, 3000, 2000, 2000, 3000, 2000, 2000);
+			if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
+			{
+				perks = array("specialty_quickrevive", "specialty_armorvest", "specialty_fastreload", "specialty_rof");
+				costs = array(1500, 2500, 3000, 2000);
+			}
+			else if (getDvar("mapname") == "zm_prison")
+			{
+				perks = array("specialty_armorvest", "specialty_fastreload", "specialty_rof", "specialty_grenadepulldeath");
+				costs = array(2500, 3000, 2000, 2000);
+			}
+			else if (getDvar("mapname") == "zm_tomb")
+			{
+				perks = array("specialty_quickrevive", "specialty_armorvest", "specialty_fastreload", "specialty_longersprint");
+				costs = array(1500, 2500, 3000, 2000);
+			}
 		}
 		else
 		{
-			perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
-			costs = array(1500, 3000, 2000, 2000, 3000, 1500, 2000, 2000);
+			perks = array("specialty_quickrevive", "specialty_armorvest", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
+			costs = array(1500, 2500, 3000, 2000, 2000, 3000, 1500, 2000, 2000);
 		}
 		
         machines = get_cached_vending_machines(); // Use cached array
@@ -849,7 +872,7 @@ bot_staggered_teleport(bots_to_teleport, offsets)
         
         // Cooldown between each bot teleport (skip wait after the last one)
         if(i < bots_to_teleport.size - 1)
-            wait 0.4;
+            wait randomfloatrange(1.0, 1.2);
     }
     
     if(teleported > 0)
@@ -1095,7 +1118,7 @@ bot_buy_box()
         if(!isDefined(self.bot.grab_weapon_time) || GetTime() > self.bot.grab_weapon_time)
         {
             activeBox = undefined;
-            closestOpenBoxDist = 99999;
+            closestOpenBoxDistSq = 999999999;
 
             // Find the closest open box with a weapon ready to grab
             foreach(box in level.chests)
@@ -1114,13 +1137,13 @@ bot_buy_box()
                    isDefined(box.weapon_out) && box.weapon_out &&
                    isDefined(box.zbarrier) && isDefined(box.zbarrier.weapon_model))
                 {
-                    dist = Distance(self.origin, box.origin);
-                    if(dist < closestOpenBoxDist)
+                    dist_sq = DistanceSquared(self.origin, box.origin);
+                    if(dist_sq < closestOpenBoxDistSq)
                     {
                         // Check if path exists before considering it
                         if(FindPath(self.origin, box.origin, undefined, 0, 1))
                         {
-                            closestOpenBoxDist = dist;
+                            closestOpenBoxDistSq = dist_sq;
                             activeBox = box;
                         }
                     }
@@ -1131,7 +1154,7 @@ bot_buy_box()
             if(isDefined(activeBox))
             {
                 // If close enough, grab it
-                if(closestOpenBoxDist < 150) // Interaction distance
+                if(closestOpenBoxDistSq < 999999999) // Interaction distance
                 {
                     // Cancel any existing goal
                     if(self hasgoal("boxGrab") || self hasgoal("boxBuy"))
@@ -1205,21 +1228,21 @@ bot_buy_box()
                     return; // Finished grab attempt
                 }
                 // If not close enough, move towards it
-                else if (closestOpenBoxDist < 3000) // Detection range
+                else if (closestOpenBoxDistSq < 999999999) // Detection range
                 {
                     if(!self hasgoal("boxGrab")) // Only set goal if not already moving
                     {
-                         self AddGoal(activeBox.origin, 150, 3, "boxGrab"); // High priority grab goal
+                         self AddGoal(activeBox.origin, 99999, 3, "boxGrab"); // High priority grab goal
                     }
                     return; // Wait until closer
                 }
 				else if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
 				{
-					if (closestOpenBoxDist < 800)
+					if (closestOpenBoxDistSq < 640000)
 					{
 						if(!self hasgoal("boxGrab"))
 						{
-							self AddGoal(activeBox.origin, 150, 3, "boxGrab");
+							self AddGoal(activeBox.origin, 99999, 3, "boxGrab");
 						}
 						return;
 					}
@@ -1268,28 +1291,28 @@ bot_buy_box()
             return; // Box is not available
         }
 
-        dist = Distance(self.origin, current_box.origin);
-        interaction_dist = 150; // Distance to interact
-        detection_dist = 3000; // Distance to start moving towards
+        dist_sq = DistanceSquared(self.origin, current_box.origin);
+        interaction_dist_sq = 22500; // Distance to interact
+        detection_dist_sq = 4000000; // Distance to start moving towards
 		
 		if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
 		{
-			detection_dist = 800;
+			detection_dist_sq = 640000;
 		}
 
         // Only try to use box if we have enough points and it's reasonably close
-        if(self.score >= 950 && dist < detection_dist)
+        if(self.score >= 950 && dist_sq < detection_dist_sq)
         {
             // Check if a path exists
             if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
             {
                 // Move to box if not already close enough
-                if(dist > interaction_dist)
+                if(dist_sq > interaction_dist_sq)
                 {
                     // Only set goal if not already pathing to this box
-                    if(!self hasgoal("boxBuy") || Distance(self GetGoal("boxBuy"), current_box.origin) > 150)
+                    if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 22500)
                     {
-                        self AddGoal(current_box.origin, 150, 2, "boxBuy"); // Normal priority buy goal
+                        self AddGoal(current_box.origin, 125, 2, "boxBuy"); // Normal priority buy goal
                     }
                     return; // Wait until closer
                 }
@@ -1588,8 +1611,8 @@ bot_should_take_weapon(boxWeapon, currentWeapon)
     // Define weapon tiers for better decision making
     tier1_weapons = array("staff_water", "staff_air", "staff_fire", "staff_lightning", "blundersplat", "blundergat", "slipgun", "slowgun", "thunder", "tesla", "freezegun", "raygun_mark2", "ray_gun");
 	tier2_weapons = array("usrpg", "minigun_alcatraz", "m1911_upgraded", "c96_upgraded");
-	tier3_weapons = array("ksg", "870mcs", "lsat", "hamr", "rpd", "mg08", "scar", "hk416", "an94", "galil", "ak47", "mp44", "evoskorpion");
-    tier4_weapons = array("srm1216", "saiga12", "svu", "tar21", "pdw57", "mp5k", "uzi", "ak74u_extclip", "ak74u", "thompson", "mp40_stalker", "mp40", "fivesevendw", "judge");
+	tier3_weapons = array("ksg", "lsat", "hamr", "rpd", "mg08", "scar", "hk416", "an94", "galil", "ak47", "mp44", "evoskorpion");
+    tier4_weapons = array("srm1216", "saiga12", "870mcs", "svu", "tar21", "pdw57", "mp5k", "uzi", "ak74u_extclip", "ak74u", "thompson", "mp40_stalker", "mp40", "fivesevendw", "judge");
     tier5_weapons = array("dsr50", "barretm82", "type95", "xm8", "m16", "beretta93r_extclip", "rnma");
     tier6_weapons = array("fnfal", "qcw05", "kard", "beretta93r", "fiveseven", "python");
 	tier7_weapons = array("m32", "rottweil72", "ballista", "saritch", "m14", "m1911", "c96", "knife_ballistic");

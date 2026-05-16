@@ -346,6 +346,8 @@ bot_get_weapon_aim_offset(weapon, dist)
 	if (isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
 		isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun") || 
 		
+		isSubStr(weapon, "minigun") || 
+		
 		isSubStr(weapon, "titus") || isSubStr(weapon, "crossbow"))
 	{
 		aim_offset = 10;
@@ -363,8 +365,8 @@ bot_get_weapon_aim_offset(weapon, dist)
 
 	// Distance correction
 	if (dist >= 1200)
-		aim_offset += 4;
-	else if (dist >= 400)
+		aim_offset -= 5;
+	else if (dist <= 600)
 		aim_offset += 5;
 
 	return aim_offset;

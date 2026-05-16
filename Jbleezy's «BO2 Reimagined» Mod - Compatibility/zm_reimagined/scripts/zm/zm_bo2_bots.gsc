@@ -293,16 +293,24 @@ bot_spawn()
 
 bot_perks()
 {
-	self endon("disconnect");
-	self endon("death");
-	
-	wait 1;
-	while(1)
-	{
-		self SetNormalHealth(1500);
-		self SetmaxHealth(1500);
-		self waittill("player_revived");
-	}
+    self endon("disconnect");
+    self endon("death");
+
+    wait 1;
+    while(1)
+    {
+        if(self hasPerk("specialty_armorvest"))
+        {
+            self SetNormalHealth(3000);
+            self SetMaxHealth(3000);
+        }
+        else
+        {
+            self SetNormalHealth(1500);
+            self SetMaxHealth(1500);
+        }
+        wait 1;
+    }
 }
 
 bot_spawn_init()
@@ -431,8 +439,8 @@ bot_buy_perks()
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             return;
 		
-		perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
-		costs = array(1500, 3000, 2000, 2500, 3000, 1500, 2000, 2000);
+		perks = array("specialty_quickrevive", "specialty_armorvest", "specialty_fastreload", "specialty_rof", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
+		costs = array(1500, 2500, 3000, 2000, 2500, 3000, 1500, 2000, 2000);
 		
         machines = get_cached_vending_machines(); // Use cached array
         nearby_machines = [];
@@ -822,7 +830,7 @@ bot_staggered_teleport(bots_to_teleport, offsets)
         
         // Cooldown between each bot teleport (skip wait after the last one)
         if(i < bots_to_teleport.size - 1)
-            wait 0.4;
+            wait randomfloatrange(1.0, 1.2);
     }
     
     if(teleported > 0)
@@ -1095,23 +1103,23 @@ bot_buy_box()
             return; 
         }
 
-        dist = Distance(self.origin, current_box.origin);
-        interaction_dist = 150;
-        detection_dist = 3000;
+        dist_sq = DistanceSquared(self.origin, current_box.origin);
+        interaction_dist_sq = 22500;
+        detection_dist_sq = 4000000;
         
         if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
         {
-            detection_dist = 800;
+            detection_dist_sq = 640000;
         }
 
-        if(self.score >= 950 && dist < detection_dist)
+        if(self.score >= 950 && dist_sq < detection_dist_sq)
         {
             if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
             {
-                if(dist > interaction_dist)
+                if(dist_sq > interaction_dist_sq)
                 {
-                    if(!self hasgoal("boxBuy") || Distance(self GetGoal("boxBuy"), current_box.origin) > 150)
-                        self AddGoal(current_box.origin, 150, 2, "boxBuy");
+                    if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 22500)
+                        self AddGoal(current_box.origin, 125, 2, "boxBuy");
                     return;
                 }
 
