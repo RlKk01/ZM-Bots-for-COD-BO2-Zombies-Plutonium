@@ -298,20 +298,26 @@ bot_perks()
     self endon("disconnect");
     self endon("death");
 
-    wait 1;
+    had_jugg = false;
+
     while(1)
     {
-        if(self hasPerk("specialty_armorvest"))
+        has_jugg = self hasPerk("specialty_armorvest");
+
+        if(has_jugg && !had_jugg)
         {
-            self SetNormalHealth(3000);
             self SetMaxHealth(3000);
+            self SetNormalHealth(3000);
+            had_jugg = true;
         }
-        else
+        else if(!has_jugg && had_jugg)
         {
-            self SetNormalHealth(1500);
-            self SetMaxHealth(1500);
+            self SetMaxHealth(600);
+            self SetNormalHealth(600);
+            had_jugg = false;
         }
-        wait 1;
+
+        wait 0.5;
     }
 }
 
@@ -1306,13 +1312,17 @@ bot_buy_box()
             // Check if a path exists
             if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
             {
+				// Skip this goal if the bot is currently reviving someone
+				if(is_true(self.bot.is_reviving))
+					return;
+				
                 // Move to box if not already close enough
                 if(dist_sq > interaction_dist_sq)
                 {
                     // Only set goal if not already pathing to this box
                     if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 22500)
                     {
-                        self AddGoal(current_box.origin, 125, 2, "boxBuy"); // Normal priority buy goal
+                        self AddGoal(current_box.origin, 150, 2, "boxBuy"); // Normal priority buy goal
                     }
                     return; // Wait until closer
                 }

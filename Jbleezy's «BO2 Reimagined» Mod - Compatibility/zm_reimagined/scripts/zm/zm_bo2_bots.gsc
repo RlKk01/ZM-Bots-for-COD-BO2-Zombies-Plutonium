@@ -296,20 +296,26 @@ bot_perks()
     self endon("disconnect");
     self endon("death");
 
-    wait 1;
+    had_jugg = false;
+
     while(1)
     {
-        if(self hasPerk("specialty_armorvest"))
+        has_jugg = self hasPerk("specialty_armorvest");
+
+        if(has_jugg && !had_jugg)
         {
-            self SetNormalHealth(3000);
             self SetMaxHealth(3000);
+            self SetNormalHealth(3000);
+            had_jugg = true;
         }
-        else
+        else if(!has_jugg && had_jugg)
         {
-            self SetNormalHealth(1500);
-            self SetMaxHealth(1500);
+            self SetMaxHealth(600);
+            self SetNormalHealth(600);
+            had_jugg = false;
         }
-        wait 1;
+
+        wait 0.5;
     }
 }
 
@@ -1116,10 +1122,15 @@ bot_buy_box()
         {
             if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
             {
+				if(is_true(self.bot.is_reviving))
+					return;
+				
                 if(dist_sq > interaction_dist_sq)
                 {
                     if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 22500)
-                        self AddGoal(current_box.origin, 125, 2, "boxBuy");
+                    {
+                        self AddGoal(current_box.origin, 150, 2, "boxBuy");
+                    }
                     return;
                 }
 

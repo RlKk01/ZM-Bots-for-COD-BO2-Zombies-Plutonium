@@ -350,13 +350,13 @@ bot_get_weapon_aim_offset(weapon, dist)
 		
 		isSubStr(weapon, "titus") || isSubStr(weapon, "crossbow"))
 	{
-		aim_offset = 10;
+		aim_offset = 8;
 	}
 	else if (isSubStr(weapon, "srm1216") || isSubStr(weapon, "saiga12") || 
 			 isSubStr(weapon, "ksg") || isSubStr(weapon, "870mcs") || 
 			 isSubStr(weapon, "rottweil") || isSubStr(weapon, "judge"))
 	{
-		aim_offset = 15;
+		aim_offset = 12;
 	}
 	else if (isSubStr(weapon, "ray_gun") || isSubStr(weapon, "usrpg") || isSubStr(weapon, "m32") || weapon == "fnp45_upgraded_zm" || weapon == "m1911_upgraded_zm")
 	{
@@ -364,10 +364,10 @@ bot_get_weapon_aim_offset(weapon, dist)
 	}
 
 	// Distance correction
-	if (dist >= 1200)
-		aim_offset -= 5;
+	if (dist >= 800)
+		aim_offset -= 4;
 	else if (dist <= 600)
-		aim_offset += 5;
+		aim_offset += 4;
 
 	return aim_offset;
 }
