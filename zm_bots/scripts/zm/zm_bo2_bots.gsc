@@ -2069,9 +2069,10 @@ bot_weapon_failsafe_monitor()
         // If they somehow have no current weapon, or their primary inventory is completely empty
         if (weapon == "none" || !isDefined(primaries) || primaries.size == 0)
         {
-            // Wait a short moment to rule out a mid-transition false positive
-            // (e.g. right after a box grab when the engine is switching weapons)
-            wait 0.5;
+            if (getDvar("mapname") == "zm_tomb")
+                wait 5;
+            else
+                wait 3;
 
             // Re-check after the buffer
             weapon = self GetCurrentWeapon();
