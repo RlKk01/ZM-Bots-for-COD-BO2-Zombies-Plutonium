@@ -294,29 +294,17 @@ bot_spawn()
 bot_perks()
 {
     self endon("disconnect");
-    self endon("death");
-
-    had_jugg = false;
-
-    while(1)
+	self endon("death");
+	
+	wait 1;
+	
+	while(1)
     {
-        has_jugg = self hasPerk("specialty_armorvest");
-
-        if(has_jugg && !had_jugg)
-        {
-            self SetMaxHealth(3000);
-            self SetNormalHealth(3000);
-            had_jugg = true;
-        }
-        else if(!has_jugg && had_jugg)
-        {
-            self SetMaxHealth(600);
-            self SetNormalHealth(600);
-            had_jugg = false;
-        }
-
-        wait 0.5;
-    }
+		self SetMaxHealth(3000);
+		self SetNormalHealth(3000);
+		
+		self waittill("player_revived");
+	}
 }
 
 bot_spawn_init()
@@ -445,8 +433,8 @@ bot_buy_perks()
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             return;
 		
-		perks = array("specialty_quickrevive", "specialty_armorvest", "specialty_fastreload", "specialty_rof", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
-		costs = array(1500, 2500, 3000, 2000, 2500, 3000, 1500, 2000, 2000);
+		perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_flakjacket", "specialty_grenadepulldeath");
+		costs = array(1500, 3000, 2000, 2500, 3000, 1500, 2000, 2000);
 		
         machines = get_cached_vending_machines(); // Use cached array
         nearby_machines = [];
