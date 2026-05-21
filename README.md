@@ -13,7 +13,7 @@ The most relevant characteristics that this bots have are:
 
 * Bots revive other players, just as a real player would.
 
-* They will teleport to the player by pressing the “5” key on the keyboard or, if using a controller, by pressing the left arrow on the directional pad.
+* They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
 
 * They will purchase doors or clear debris within a small radius range.
 
