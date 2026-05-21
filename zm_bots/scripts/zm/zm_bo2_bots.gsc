@@ -799,48 +799,63 @@ manual_bot_teleport_monitor()
     self endon("death");
     self endon("disconnect");
     level endon("end_game");
-	
-    self notifyOnPlayerCommand("teleport_bots_pressed", "+actionslot 3");
-	
-    while(true)
+    
+    self notifyOnPlayerCommand("teleport_pressed", "+actionslot 3");
+    
+    last_press_time = 0;
+    
+    for (;;)
     {
-        // Wait until the player presses the keybind
-        self waittill("teleport_bots_pressed");
-		
-        // Safety check: Only teleport bots if the player is safely on the ground
-        if(self IsOnGround())
+        self waittill("teleport_pressed");
+        
+        current_time = GetTime(); // Get the current server time in milliseconds
+        
+        // If pressed again within 500 milliseconds (0.5 seconds), execute the teleport
+        if (current_time - last_press_time < 500)
         {
-            // Collect all bots first
-            bots_to_teleport = [];
-            players = get_players();
+            self execute_bot_teleport();
             
-            foreach(player in players)
-            {
-                if(isDefined(player.bot))
-                    bots_to_teleport[bots_to_teleport.size] = player;
-            }
-            
-            if(bots_to_teleport.size > 0)
-            {
-                // Spread offsets so bots don't stack on each other
-                offsets = [];
-                offsets[0] = (50,   0,  0);
-                offsets[1] = (-50,  0,  0);
-                offsets[2] = (0,   50,  0);
-                offsets[3] = (0,  -50,  0);
-                
-                teleport_player = self; // Capture caller for the thread
-                
-                // Thread the staggered teleport so the monitor loop stays responsive
-                teleport_player thread bot_staggered_teleport(bots_to_teleport, offsets);
-            }
+            // Reset the timer and add a 1-second cooldown so mashing the button doesn't spam teleports
+            last_press_time = 0;
+			
+            wait 1.0; 
         }
-        else 
+        else
         {
-            self iprintln("You must be on the ground to teleport bots.");
+            // If it's the first press, just record the time
+            last_press_time = current_time;
         }
-        // Small wait to prevent the script from spamming if the button is held down
-        wait 0.5;
+    }
+}
+
+// Separated the actual teleport logic to keep things clean
+execute_bot_teleport()
+{
+    if(self IsOnGround())
+    {
+        bots_to_teleport = [];
+        players = get_players();
+        
+        foreach(player in players)
+        {
+            if(isDefined(player.bot))
+                bots_to_teleport[bots_to_teleport.size] = player;
+        }
+        
+        if(bots_to_teleport.size > 0)
+        {
+            offsets = [];
+            offsets[0] = (50,   0,  0);
+            offsets[1] = (-50,  0,  0);
+            offsets[2] = (0,   50,  0);
+            offsets[3] = (0,  -50,  0);
+            
+            self thread bot_staggered_teleport(bots_to_teleport, offsets);
+        }
+    }
+    else 
+    {
+        self iprintln("You must be on the ground to teleport bots.");
     }
 }
 
