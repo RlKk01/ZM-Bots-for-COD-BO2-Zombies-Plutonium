@@ -214,6 +214,7 @@ bot_spawn()
 {
 	self bot_spawn_init();
 	self thread bot_main();
+	self thread bot_weapon_switch_think();
 	self thread bot_weapon_failsafe_monitor();
 }
 
@@ -1009,7 +1010,7 @@ bot_pack_gun()
         // Only attempt to pap every 10 seconds
         self.bot.pap_purchase_time = GetTime() + 10000;
 		
-		if(level.round_number >= 9)
+		if(level.round_number >= 10)
 		{
 			if(!self bot_should_pack())
 				return;
@@ -1072,7 +1073,7 @@ bot_buy_perks()
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             return;
 		
-		if(level.round_number >= 7)
+		if(level.round_number >= 8)
 		{
 			if(level.perk_purchase_limit <= 5)
 			{
@@ -1890,6 +1891,76 @@ bot_staggered_teleport(bots_to_teleport, offsets)
     
     if(teleported > 0)
         self iprintln("Bots Teleported! (" + teleported + "/" + bots_to_teleport.size + ")");
+}
+
+bot_weapon_switch_think()
+{
+    self endon("death");
+    self endon("disconnect");
+    level endon("game_ended");
+
+    wait randomfloatrange(1.0, 3.0);
+
+    for(;;)
+    {
+        wait randomfloatrange(2.0, 4.0);
+
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving))
+            continue;
+
+        if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
+            continue;
+
+        if(!self isonground())
+            continue;
+
+        if(isDefined(self.bot.next_weapon_switch) && getTime() < self.bot.next_weapon_switch)
+            continue;
+
+        primaries = self GetWeaponsListPrimaries();
+
+        if(!isDefined(primaries) || primaries.size < 2)
+            continue;
+
+        current = self GetCurrentWeapon();
+
+        if(current == "none")
+            continue;
+
+        weapon = bot_switch_weapon(current, primaries);
+
+        if(isDefined(weapon) && weapon != current)
+        {
+            self allowattack(0);
+            self pressads(0);
+            self SwitchToWeapon(weapon);
+            self.bot.next_weapon_switch = getTime() + randomintrange(30000, 75000);
+        }
+    }
+}
+
+bot_switch_weapon(current_weapon, primaries)
+{
+    candidates = [];
+
+    foreach(weapon in primaries)
+    {
+        if(weapon == current_weapon)
+            continue;
+
+        clip = self GetWeaponAmmoClip(weapon);
+        stock = self GetWeaponAmmoStock(weapon);
+
+        if(!clip && !stock)
+            continue;
+
+        candidates[candidates.size] = weapon;
+    }
+
+    if(!isDefined(candidates) || candidates.size == 0)
+        return undefined;
+
+    return candidates[randomint(candidates.size)];
 }
 
 bot_stand_fix()
