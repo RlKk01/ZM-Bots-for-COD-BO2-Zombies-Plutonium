@@ -7,59 +7,69 @@
 
 bot_combat_think(damage, attacker, direction)
 {
-	if (!bot_can_do_combat())
-		return;
+	self allowattack(0);
+	self pressads(0);
 	
-	if(self atgoal("flee"))
-		self cancelgoal("flee");
-
-	if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	for (;;)
 	{
-		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
+		if (!bot_can_do_combat())
 		{
-			self.bot.next_flee_scan = getTime() + 2000;
-			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
-            
-			nearest = bot_nearest_node(self.origin);
-			if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
+			return;
+		}
+		
+		if(self atgoal("flee"))
+			self cancelgoal("flee");
+
+		if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+		{
+			if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 			{
-				foreach (node in nodes)
+				self.bot.next_flee_scan = getTime() + 1000;
+				nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
+				
+				nearest = bot_nearest_node(self.origin);
+				if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
 				{
-					if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
+					foreach (node in nodes)
 					{
-						self addgoal(node.origin, 24, 4, "flee");
-						break;
+						if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
+						{
+							self addgoal(node.origin, 24, 4, "flee");
+							break;
+						}
 					}
 				}
 			}
 		}
-	}
-	
-	if(self GetCurrentWeapon() == "none")
-		return;
-    
-	sight = self bot_best_enemy();
-	
-	if(!isdefined(self.bot.threat.entity) && !isAlive(self.bot.threat.entity))
-		return;
-	
-	if (threat_dead())
-	{
-		self bot_combat_dead();
-		return;
-	}
-	
-	if (!sight && !self bot_has_enemy())
-	{
-		self allowattack(0);
-		self pressads(0);
-		return;
-	}
 		
-	self bot_combat_main();
+		if(self GetCurrentWeapon() == "none")
+			return;
+		
+		sight = self bot_best_enemy();
+		
+		if(!isdefined(self.bot.threat.entity))
+			return;
+		
+		if (threat_dead())
+		{
+			self bot_combat_dead();
+			return;
+		}
+		
+		if (!sight && !self bot_has_enemy())
+		{
+			self allowattack(0);
+			self pressads(0);
+			return;
+		}
+		
+		self bot_combat_main();
+		
+		wait 0.05;
+	}
 }
 
-bot_combat_main() //checked partially changed to match cerberus output changed at own discretion
+bot_combat_main()
 {
 	weapon = self getcurrentweapon();
 	
@@ -76,6 +86,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	}
 	
 	currentammo = self getweaponammoclip(weapon) + self getweaponammostock(weapon);
+	
 	if (!currentammo)
 	{
 		return;
@@ -85,7 +96,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	
 	time = getTime();
 	
-	if (!self bot_should_hip_fire() && self.bot.threat.dot > 0.85)
+	if (!self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
 	{
 		ads = 1;
 	}
@@ -104,6 +115,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	if (time >= self.bot.threat.time_aim_correct)
 	{
 		self.bot.threat.time_aim_correct += self.bot.threat.time_aim_interval;
+		
 		frac = (time - self.bot.threat.time_first_sight) / 100;
 		frac = clamp(frac, 0, 1);
 		
@@ -135,7 +147,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 		}
 	}
 	
-	if (self bot_on_target(self.bot.threat.aim_target, 100))
+	if (self bot_on_target(self.bot.threat.entity.origin, 100))
 	{
 		self allowattack(1);
 	}
@@ -151,7 +163,7 @@ bot_combat_main() //checked partially changed to match cerberus output changed a
 	}
 }
 
-bot_combat_dead(damage) //checked matches cerberus output
+bot_combat_dead(damage)
 {
 	wait 0.1;
 	
@@ -162,7 +174,7 @@ bot_combat_dead(damage) //checked matches cerberus output
 	self bot_clear_enemy();
 }
 
-bot_should_hip_fire() //checked matches cerberus output
+bot_should_hip_fire()
 {
 	enemy = self.bot.threat.entity;
 	
@@ -193,18 +205,23 @@ bot_should_hip_fire() //checked matches cerberus output
 		case "mg":
 			distcheck = 250;
 			break;
+		
 		case "smg":
 			distcheck = 350;
 			break;
+		
 		case "spread":
 			distcheck = 400;
 			break;
+		
 		case "pistol":
 			distcheck = 200;
 			break;
+		
 		case "rocketlauncher":
 			distcheck = 0;
 			break;
+		
 		case "rifle":
 		default:
 			distcheck = 300;
@@ -219,7 +236,7 @@ bot_should_hip_fire() //checked matches cerberus output
 	return distsq < (distcheck * distcheck);
 }
 
-bot_patrol_near_enemy(damage, attacker, direction) //checked matches cerberus output
+bot_patrol_near_enemy(damage, attacker, direction)
 {
 	if (isDefined(attacker))
 	{
@@ -262,16 +279,14 @@ bot_patrol_near_enemy(damage, attacker, direction) //checked matches cerberus ou
 	}
 }
 
-bot_lookat_entity(entity) //checked matches cerberus output
+bot_lookat_entity(entity)
 {
 	if (isplayer(entity) && entity getstance() != "prone")
 	{
 		if (distancesquared(self.origin, entity.origin) < 65536)
 		{
 			origin = entity getcentroid() + vectorScale((0, 0, 1), 10);
-			
 			self lookat(origin);
-			
 			return;
 		}
 	}
@@ -288,7 +303,7 @@ bot_lookat_entity(entity) //checked matches cerberus output
 	}
 }
 
-bot_update_lookat(origin, frac) //checked matches cerberus output
+bot_update_lookat(origin, frac)
 {
     if (!isDefined(self.bot.threat.entity))
         return;
@@ -296,7 +311,7 @@ bot_update_lookat(origin, frac) //checked matches cerberus output
     self lookat(origin);
 }
 
-bot_update_aim(frames) //checked matches cerberus output
+bot_update_aim(frames)
 {
 	ent = self.bot.threat.entity;
 	
@@ -327,50 +342,26 @@ bot_update_aim(frames) //checked matches cerberus output
 	if (!threat_is_player())
 	{
 		centroid = ent getcentroid();
+		
 		height = centroid[2] - prediction[2];
 		
-		aim_offset = bot_get_weapon_aim_offset(weapon, dist);
+		aim_offset = 10;
+
+		// Distance correction
+		if (dist >= 800)
+			aim_offset -= 5;
+		else if (dist <= 600)
+			aim_offset += 10;
 
 		return prediction + (0, 0, height + aim_offset);
 	}
 
 	height = ent getplayerviewheight();
+	
 	return prediction + (0, 0, height);
 }
 
-// New helper function - weapon aim offset lookup
-bot_get_weapon_aim_offset(weapon, dist)
-{
-	aim_offset = 20; // Default offset
-	
-	if (isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
-		isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun") || 
-		
-		isSubStr(weapon, "minigun"))
-	{
-		aim_offset = 8;
-	}
-	else if (isSubStr(weapon, "srm1216") || isSubStr(weapon, "saiga12") || 
-			 isSubStr(weapon, "ksg") || isSubStr(weapon, "870mcs") || 
-			 isSubStr(weapon, "rottweil") || isSubStr(weapon, "judge"))
-	{
-		aim_offset = 12;
-	}
-	else if (isSubStr(weapon, "ray_gun") || isSubStr(weapon, "usrpg") || isSubStr(weapon, "m32") || weapon == "m1911_upgraded_zm")
-	{
-		aim_offset = 0;
-	}
-
-	// Distance correction
-	if (dist >= 800)
-		aim_offset -= 4;
-	else if (dist <= 600)
-		aim_offset += 4;
-
-	return aim_offset;
-}
-
-bot_on_target(aim_target, radius) //checked matches cerberus output
+bot_on_target(aim_target, radius)
 {
 	angles = self getplayerangles();
 	forward = anglesToForward(angles);
@@ -382,10 +373,11 @@ bot_on_target(aim_target, radius) //checked matches cerberus output
 	{
 		return 1;
 	}
+	
 	return 0;
 }
 
-bot_has_lmg() //checked changed at own discretion
+bot_has_lmg()
 {
 	if (bot_has_weapon_class("mg"))
 	{
@@ -395,7 +387,7 @@ bot_has_lmg() //checked changed at own discretion
 	return 0;
 }
 
-bot_has_weapon_class(class) //checked changed at own discretion
+bot_has_weapon_class(class)
 {
 	if (self isreloading())
 	{
@@ -417,7 +409,7 @@ bot_has_weapon_class(class) //checked changed at own discretion
 	return 0;
 }
 
-bot_can_reload() //checked changed to match cerberus output
+bot_can_reload()
 {
 	weapon = self getcurrentweapon();
 	
@@ -439,18 +431,15 @@ bot_can_reload() //checked changed to match cerberus output
 	return 1;
 }
 
-bot_best_enemy() //checked partially changed to match cerberus output
+bot_best_enemy()
 {
-	enemies = get_cached_zombies();
+	enemies = get_cached_zombies(); // Use cached array
+	enemies = arraysort(enemies, self.origin);
 	
 	i = 0;
+	
 	while (i < enemies.size)
 	{
-		if (distancesquared(self.origin, enemies[i].origin) > 4000000)
-		{
-			i++;
-			continue;
-		}
 		if (threat_should_ignore(enemies[i]))
 		{
 			i++;
@@ -464,15 +453,15 @@ bot_best_enemy() //checked partially changed to match cerberus output
 			self.bot.threat.time_recent_sight = getTime();
 			self.bot.threat.dot = bot_dot_product(enemies[i].origin);
 			self.bot.threat.position = enemies[i].origin;
-		
 			return 1;
 		}
 		i++;
 	}
+	
 	return 0;
 }
 
-bot_weapon_ammo_frac() //checked matches cerberus output
+bot_weapon_ammo_frac()
 {
 	if (self isreloading() || self isswitchingweapons())
 	{
@@ -498,7 +487,7 @@ bot_weapon_ammo_frac() //checked matches cerberus output
 	return current / total;
 }
 
-bot_select_weapon() //checked partially changed to match cerberus output
+bot_select_weapon()
 {
 	if (self isthrowinggrenade() || self isswitchingweapons() || self isreloading())
 	{
@@ -537,6 +526,7 @@ bot_select_weapon() //checked partially changed to match cerberus output
 				return;
 			}
 		}
+		
 		return;
 	}
 	
@@ -554,7 +544,7 @@ bot_select_weapon() //checked partially changed to match cerberus output
 		
 		while (i < primaries.size)
 		{
-			if (primaries[ i ] == weapon || primaries[i] == "fhj18_mp")
+			if (primaries[i] == weapon || primaries[i] == "fhj18_mp")
 			{
 				i++;
 				continue;
@@ -565,7 +555,6 @@ bot_select_weapon() //checked partially changed to match cerberus output
 				self switchtoweapon(primaries[i]);
 				return;
 			}
-			
 			i++;
 		}
 		
@@ -591,7 +580,7 @@ bot_select_weapon() //checked partially changed to match cerberus output
 	}
 }
 
-bot_can_do_combat() //checked matches cerberus output
+bot_can_do_combat()
 {
 	if (self ismantling() || self isonladder())
 	{
@@ -611,7 +600,7 @@ bot_can_do_combat() //checked matches cerberus output
 	return 1;
 }
 
-bot_dot_product(origin) //checked matches cerberus output
+bot_dot_product(origin)
 {
 	angles = self getplayerangles();
 	forward = anglesToForward(angles);
@@ -622,47 +611,52 @@ bot_dot_product(origin) //checked matches cerberus output
 	return dot;
 }
 
-threat_should_ignore(entity) //checked matches cerberus output
+threat_should_ignore(entity)
 {
 	return 0;
 }
 
-bot_clear_enemy() //checked matches cerberus output
+bot_clear_enemy()
 {
 	self clearlookat();
-	
 	self.bot.threat.entity = undefined;
 }
 
-threat_dead() //checked changed at own discretion
-{
-	if (self bot_has_enemy())
-	{
-		ent = self.bot.threat.entity;
-		if (!isalive(ent))
-		{
-			return 1;
-		}
-		return 0;
-	}
-	return 0;
-}
-
-bot_has_enemy() //checked changed at own discretion
+bot_has_enemy()
 {
 	if (isDefined(self.bot.threat.entity))
 	{
 		return 1;
 	}
+	
 	return 0;
 }
 
-threat_is_player() //checked changed at own discretion
+threat_dead()
+{
+	if (self bot_has_enemy())
+	{
+		ent = self.bot.threat.entity;
+		
+		if (!isalive(ent))
+		{
+			return 1;
+		}
+		
+		return 0;
+	}
+	
+	return 0;
+}
+
+threat_is_player()
 {
 	ent = self.bot.threat.entity;
+	
 	if (isDefined(ent) && isplayer(ent))
 	{
 		return 1;
 	}
+	
 	return 0;
 }
