@@ -8,8 +8,6 @@ To install these files, press «Win + R» and paste the following path: «%local
 
 After that, paste the files right there.
 
-(Just a reminder: The other file is an optional one, for those who play with the mod "Bo2 Reimagined" from Jbleezy).
-
 The most relevant characteristics that this bots have are:
 * They buy Perks, Wall Guns and upgrade their weapons on a determined radius.
 
