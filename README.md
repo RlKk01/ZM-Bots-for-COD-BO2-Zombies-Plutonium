@@ -4,6 +4,12 @@ To add bots in-game, simply open the console and type "set zm_bots *", where the
 
 If anyone wants to improve this mod, feel free to try, it’s completely open source.
 
+To install these files, press «Win + R» and paste the following path: «%localappdata%\Plutonium\storage\t6\mods», then press Enter.
+
+After that, paste the files right there.
+
+(Just a reminder: The other file is an optional one, for those who play with the mod "Bo2 Reimagined" from Jbleezy).
+
 The most relevant characteristics that this bots have are:
 * They buy Perks, Wall Guns and upgrade their weapons on a determined radius.
 
