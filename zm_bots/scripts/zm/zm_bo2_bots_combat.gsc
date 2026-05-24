@@ -10,63 +10,58 @@ bot_combat_think(damage, attacker, direction)
 	self allowattack(0);
 	self pressads(0);
 	
-	for (;;)
-	{
-		if (!bot_can_do_combat())
-		{
-			return;
-		}
-		
-		if(self atgoal("flee"))
-			self cancelgoal("flee");
+	if (!bot_can_do_combat())
+		return;
+	
+	if(self atgoal("flee"))
+		self cancelgoal("flee");
 
-		if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	{
+		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 		{
-			if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
+			self.bot.next_flee_scan = getTime() + 1000;
+			
+			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
+            
+			nearest = bot_nearest_node(self.origin);
+			
+			if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
 			{
-				self.bot.next_flee_scan = getTime() + 1000;
-				nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
-				
-				nearest = bot_nearest_node(self.origin);
-				if (isDefined(nearest) && !self hasgoal("flee") && isDefined(nodes))
+				foreach (node in nodes)
 				{
-					foreach (node in nodes)
+					if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
 					{
-						if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
-						{
-							self addgoal(node.origin, 24, 4, "flee");
-							break;
-						}
+						self addgoal(node.origin, 24, 4, "flee");
+						break;
 					}
 				}
 			}
 		}
-		
-		if(self GetCurrentWeapon() == "none")
-			return;
-		
-		sight = self bot_best_enemy();
-		
-		if(!isdefined(self.bot.threat.entity))
-			return;
-		
-		if (threat_dead())
-		{
-			self bot_combat_dead();
-			return;
-		}
-		
-		if (!sight && !self bot_has_enemy())
-		{
-			self allowattack(0);
-			self pressads(0);
-			return;
-		}
-		
-		self bot_combat_main();
-		
-		wait 0.05;
 	}
+	
+	if(self GetCurrentWeapon() == "none")
+		return;
+    
+	sight = self bot_best_enemy();
+	
+	if(!isdefined(self.bot.threat.entity))
+		return;
+	
+	if (threat_dead())
+	{
+		self bot_combat_dead();
+		return;
+	}
+	
+	if (!sight && !self bot_has_enemy())
+	{
+		self allowattack(0);
+		self pressads(0);
+		return;
+	}
+		
+	self bot_combat_main();
 }
 
 bot_combat_main()

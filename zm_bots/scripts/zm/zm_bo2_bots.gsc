@@ -494,10 +494,10 @@ bot_main()
 			self bot_revive_teammates();
 		}
 		
-		self bot_buy_box();
+		self bot_pickup_powerup();
 		self bot_buy_door();
 		self bot_clear_debris();
-		self bot_pickup_powerup();
+		self bot_buy_box();
 		
 		wait 0.05;
 	}
@@ -943,7 +943,7 @@ bot_buy_wallbuy()
 		
 		foreach(wallbuy in wallbuys)
 		{
-			if(DistanceSquared(wallbuy.origin, self.origin) <= 9000000 && wallbuy.trigger_stub.cost <= self.score)
+			if(DistanceSquared(wallbuy.origin, self.origin) <= 3240000 && wallbuy.trigger_stub.cost <= self.score)
 			{
 				if(bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
 				   weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && 
@@ -968,9 +968,9 @@ bot_buy_wallbuy()
 		if(!isdefined(weaponToBuy))
 			return;
 		
-		self AddGoal(weaponToBuy.origin, 3000, 2, "weaponBuy");
+		self AddGoal(weaponToBuy.origin, 1800, 2, "weaponBuy");
 		
-		while(!self AtGoal("weaponBuy") && !DistanceSquared(self.origin, weaponToBuy.origin) <= 9000000)
+		while(!self AtGoal("weaponBuy") && !DistanceSquared(self.origin, weaponToBuy.origin) <= 3240000)
 		{
 			wait 1;
 			
@@ -983,15 +983,19 @@ bot_buy_wallbuy()
 		
 		self cancelgoal("weaponBuy");
 		
-		// Stop shooting and aiming before the weapon swap to prevent losing the weapon
+		self.bot.is_buying = true;
+		
 		self allowattack(0);
 		self pressads(0);
 		
 		self maps\mp\zombies\_zm_score::minus_to_player_score(weaponToBuy.trigger_stub.cost);
 		
+		self TakeWeapon(weapon);
 		self GiveWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
 		self SwitchToWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
 		self SetSpawnWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
+		
+		self.bot.is_buying = undefined;
 	}
 }
 
@@ -1034,15 +1038,20 @@ bot_pack_gun()
 					if(weapon == upgrade_name)
 						return;
 					
-					// Stop shooting and aiming before the weapon swap to prevent losing the weapon
+					self.bot.is_buying = true;
+					
 					self allowattack(0);
 					self pressads(0);
 					
 					self maps\mp\zombies\_zm_score::minus_to_player_score(5000);
 					
+					self TakeWeapon(weapon);
 					self GiveWeapon(upgrade_name);
 					self SwitchToWeapon(upgrade_name);
 					self SetSpawnWeapon(upgrade_name);
+					
+					self.bot.is_buying = undefined;
+					
 					return;
 				}
 			}
@@ -1415,44 +1424,45 @@ bot_clear_debris()
 
 bot_pickup_powerup()
 {
-    if (GetTime() < self.bot.powerup_check_time)
-        return;
-	
-    self.bot.powerup_check_time = GetTime() + 2000;
+	// Only try to pickup a powerup on a timed interval
+    if (!isDefined(self.bot.powerup_check_time) || GetTime() > self.bot.powerup_check_time)
+    {
+		self.bot.powerup_check_time = GetTime() + 2000;
 
-	powerups = maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000);
+		powerups = maps\mp\zombies\_zm_powerups::get_powerups(self.origin, 1000);
 
-	if(!isDefined(powerups) || powerups.size == 0)
-	{
-		self CancelGoal("powerup");
-		return;
-	}
-
-	foreach(powerup in powerups)
-	{
-        // Skip checks if the bot is currently reviving someone
-        if(is_true(self.bot.is_reviving))
-            continue;
-		
-		// Make the bot avoid picking up the nuke powerup
-		if(isDefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
-			continue;
-		
-		if(getDvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
-			continue;
-
-		if(DistanceSquared(self.origin, powerup.origin) > 1000000)
-			continue;
-
-		if(!FindPath(self.origin, powerup.origin, undefined, 0, 1))
-			continue;
-
-		self AddGoal(powerup.origin, 25, 2, "powerup");
-
-		if(self AtGoal("powerup") || DistanceSquared(self.origin, powerup.origin) < 2500)
+		if(!isDefined(powerups) || powerups.size == 0)
+		{
 			self CancelGoal("powerup");
+			return;
+		}
 
-		return;
+		foreach(powerup in powerups)
+		{
+			// Skip checks if the bot is currently reviving someone
+			if(is_true(self.bot.is_reviving))
+				continue;
+			
+			// Make the bot avoid picking up the nuke powerup
+			if(isDefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
+				continue;
+			
+			if(getDvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
+				continue;
+
+			if(DistanceSquared(self.origin, powerup.origin) > 1000000)
+				continue;
+
+			if(!FindPath(self.origin, powerup.origin, undefined, 0, 1))
+				continue;
+
+			self AddGoal(powerup.origin, 25, 2, "powerup");
+
+			if(self AtGoal("powerup") || DistanceSquared(self.origin, powerup.origin) < 2500)
+				self CancelGoal("powerup");
+
+			return;
+		}
 	}
 }
 
@@ -1899,13 +1909,13 @@ bot_weapon_switch_think()
     self endon("disconnect");
     level endon("game_ended");
 
-    wait randomfloatrange(1.0, 3.0);
+    wait randomfloatrange(2.0, 3.0);
 
     for(;;)
     {
         wait randomfloatrange(2.0, 4.0);
 
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
             continue;
 
         if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
@@ -1994,10 +2004,7 @@ bot_weapon_failsafe_monitor()
         // If they somehow have no current weapon, or their primary inventory is completely empty
         if (weapon == "none" || !isDefined(primaries) || primaries.size == 0)
         {
-            if (getDvar("mapname") == "zm_tomb")
-                wait 5;
-            else
-                wait 3;
+            wait 5;
 
             // Re-check after the buffer
             weapon = self GetCurrentWeapon();
@@ -2033,6 +2040,7 @@ fast_array_contains(array, value)
 	{
 		if(item == value)
 			return true;
+		
 		// Compare origins with a small tolerance
 		if(distancesquared(item, value) < 100)
 			return true;
