@@ -513,18 +513,6 @@ bot_buy_box()
         // Don't try if we're in last stand or can't afford it
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
             return;
-		
-		weapon = self GetCurrentWeapon();
-		
-		// Don't spend points on the box if they have wonder weapons
-		if(isSubStr(weapon, "staff") || isSubStr(weapon, "blunder") || 
-		   isSubStr(weapon, "slowgun") || isSubStr(weapon, "slipgun") || 
-		   isSubStr(weapon, "mark2"))
-		{
-			if(self hasgoal("boxBuy"))
-				self CancelGoal("boxBuy");
-			return;
-		}
 
         // Check global box usage tracker
         if(isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self)
