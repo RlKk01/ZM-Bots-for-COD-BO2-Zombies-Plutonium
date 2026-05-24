@@ -823,18 +823,22 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "staff"))
 		return 100;
 		
-    // LMGs & Special Weapons
+    // Special Weapons
+	if (IsSubStr(weapon, "minigun") || 
+		IsSubStr(weapon, "titus"))
+		return 99;
+		
+    // LMGs
 	if (IsSubStr(weapon, "mg08") || 
 		IsSubStr(weapon, "rpd") || 
 		IsSubStr(weapon, "hamr") || 
 		IsSubStr(weapon, "lsat") || 
 		IsSubStr(weapon, "mk48") || 
-		IsSubStr(weapon, "qbb95") || 
-		IsSubStr(weapon, "minigun") || 
-		IsSubStr(weapon, "titus") || 
+		IsSubStr(weapon, "qbb95"))
+		return 95;
     
     // Assault Rifles
-		IsSubStr(weapon, "mp44") || 
+	if (IsSubStr(weapon, "mp44") || 
 		IsSubStr(weapon, "ak47") || 
 		IsSubStr(weapon, "galil") || 
 		IsSubStr(weapon, "hk416") || 
@@ -842,7 +846,7 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "an94") || 
 		IsSubStr(weapon, "tar21") || 
 		IsSubStr(weapon, "type95"))
-		return 99;
+		return 90;
     
     // SMGs / Shotguns / Handguns
     if (IsSubStr(weapon, "mp40_stalker") || 
@@ -862,7 +866,7 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "fivesevendw") || 
 		IsSubStr(weapon, "beretta93r_extclip") || 
 		IsSubStr(weapon, "judge"))
-		return 75;
+		return 80;
 		
 	// Explosives Weapons
 	if (IsSubStr(weapon, "m32") || 
@@ -870,7 +874,8 @@ bot_get_weapon_score(weapon)
 		return 60;
 	
 	// Weapons that it shouldn't be take it from the box
-	if (IsSubStr(weapon, "knife_ballistic") || 
+	if (IsSubStr(weapon, "storm") || 
+		IsSubStr(weapon, "knife_ballistic") || 
 		IsSubStr(weapon, "willy_pete") || 
 		IsSubStr(weapon, "time_bomb") || 
 		IsSubStr(weapon, "emp_grenade") || 
@@ -878,7 +883,7 @@ bot_get_weapon_score(weapon)
 		return 0;
 
     // Unknown/Custom weapons default to a mid-tier score
-    return 15; 
+    return 50; 
 }
 
 bot_buy_wallbuy()
