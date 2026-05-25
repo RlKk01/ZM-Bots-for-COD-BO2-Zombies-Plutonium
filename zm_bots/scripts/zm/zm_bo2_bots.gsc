@@ -559,6 +559,15 @@ bot_buy_box()
         // Make sure boxes exist and index is valid
         if(!isDefined(level.chests) || level.chests.size == 0 || !isDefined(level.chest_index) || level.chest_index >= level.chests.size)
             return;
+		
+        if(!isDefined(level.bot_last_chest_index))
+            level.bot_last_chest_index = level.chest_index;
+
+        if(level.bot_last_chest_index != level.chest_index)
+        {
+            level.mystery_box_teddy_locations = [];
+            level.bot_last_chest_index = level.chest_index;
+        }
 
         current_box = level.chests[level.chest_index];
 		
@@ -566,12 +575,19 @@ bot_buy_box()
             return;
 
         // Check if box is available
-        if(is_true(current_box._box_open) || 
-		flag("moving_chest_now") || 
-		(isDefined(current_box.is_locked) && current_box.is_locked) || 
-		(isDefined(current_box.chest_user) && current_box.chest_user != self) || 
-		(isDefined(level.mystery_box_teddy_locations) && fast_array_contains(level.mystery_box_teddy_locations, current_box.origin))) 
+        if(is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
+		   flag("moving_chest_now") || 
+		  (isDefined(current_box.is_locked) && current_box.is_locked) || 
+		  (isDefined(current_box.chest_user) && current_box.chest_user != self) || 
+		  (isDefined(level.mystery_box_teddy_locations) && fast_array_contains(level.mystery_box_teddy_locations, current_box.origin))) 
         {
+			
+            if(self hasgoal("boxBuy"))
+                self cancelgoal("boxBuy");
+			
+            if(self hasgoal("boxGrab"))
+                self cancelgoal("boxGrab");
+			
             return; 
         }
 
@@ -603,10 +619,10 @@ bot_buy_box()
                 self lookat(current_box.origin + aim_offset);
                 wait randomfloatrange(0.3, 0.8);
 
-                if(self.score < 950 || is_true(current_box._box_open) || 
-				flag("moving_chest_now") || 
-				(isDefined(current_box.is_locked) && current_box.is_locked) || 
-				self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+                if(self.score < 950 || is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
+				   flag("moving_chest_now") || 
+				  (isDefined(current_box.is_locked) && current_box.is_locked) || 
+				   self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
                 {
                     return;
                 }
@@ -763,11 +779,12 @@ bot_monitor_box_animation(box)
                 break;
             }
         }
+		
+		self.bot.last_box_interaction_time = GetTime();
     }
     
     // Cleanup
 	self clearlookat();
-    self.bot.last_box_interaction_time = GetTime();
     self.bot.current_box = undefined;
     self.bot.is_using_box = undefined;
     
@@ -782,12 +799,29 @@ bot_monitor_box_animation(box)
 
 bot_should_take_weapon(boxWeapon, currentWeapon)
 {
-    // Failsafe for custom mods: If we can't read the box weapon, take it to be safe
+    score_current = bot_get_weapon_score(currentWeapon);
+    
+    // If the bot has a Wonder Weapon (score 100), 
+    // do NOT replace it unless we know for a fact the box is giving another Wonder Weapon.
+    if (score_current >= 100)
+    {
+        if (isDefined(boxWeapon) && bot_get_weapon_score(boxWeapon) >= 100)
+            return true;
+            
+        return false;
+    }
+
+    // Failsafe: If we can't read the box weapon, only blindly take it 
+    // if our current weapon is bad/mid-tier (score less than 90).
     if(!isDefined(boxWeapon))
-		return true; 
+    {
+        if (score_current >= 90)
+            return false;
+            
+        return true;
+    }
 
     score_box = bot_get_weapon_score(boxWeapon);
-    score_current = bot_get_weapon_score(currentWeapon);
 
     // Take it if it's a better tier, or equal
     return score_box >= score_current;
@@ -833,10 +867,14 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "scar") || 
 		IsSubStr(weapon, "an94") || 
 		IsSubStr(weapon, "tar21") || 
-		IsSubStr(weapon, "type95"))
+		IsSubStr(weapon, "type95") || 
+		
+	// Shotguns
+		IsSubStr(weapon, "ksg") || 
+		IsSubStr(weapon, "srm1216"))
 		return 90;
     
-    // SMGs / Shotguns / Handguns
+    // SMGs
     if (IsSubStr(weapon, "mp40_stalker") || 
 		IsSubStr(weapon, "thompson") || 
 		IsSubStr(weapon, "ak74u_extclip") || 
@@ -847,10 +885,12 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "vector_extclip") || 
 		IsSubStr(weapon, "evoskorpion") || 
 		IsSubStr(weapon, "peacekeeper") || 
-		IsSubStr(weapon, "ksg") || 
+	
+	// Shotguns
 		IsSubStr(weapon, "870mcs") || 
 		IsSubStr(weapon, "saiga12") || 
-		IsSubStr(weapon, "srm1216") || 
+		
+	// Handguns
 		IsSubStr(weapon, "fivesevendw") || 
 		IsSubStr(weapon, "beretta93r_extclip") || 
 		IsSubStr(weapon, "judge"))
@@ -922,8 +962,7 @@ bot_buy_wallbuy()
 			isSubStr(weapon, "mp5") || isSubStr(weapon, "uzi") || isSubStr(weapon, "ak74u_extclip") || 
 			isSubStr(weapon, "thompson") || isSubStr(weapon, "mp40_stalker") || 
 		
-			isSubStr(weapon, "dsr50") || isSubStr(weapon, "as50") || isSubStr(weapon, "svu") || 
-			isSubStr(weapon, "barrett") || 
+			isSubStr(weapon, "as50") || isSubStr(weapon, "svu") || 
 			isSubStr(weapon, "fivesevendw") || isSubStr(weapon, "judge") || isSubStr(weapon, "rnma"))
 		{
 			self CancelGoal("weaponBuy");
