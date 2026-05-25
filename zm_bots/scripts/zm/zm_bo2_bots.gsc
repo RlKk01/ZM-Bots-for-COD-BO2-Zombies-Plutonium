@@ -533,12 +533,17 @@ bot_buy_box()
         }
 		else if (level.round_number <= 15)
 		{
-            if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 120000))
+            if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 150000))
+				return;
+        }
+		else if (level.round_number <= 25)
+		{
+            if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 220000))
 				return;
         }
 		else
 		{
-            if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 180000))
+            if (isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 300000))
 				return;
         }
         
