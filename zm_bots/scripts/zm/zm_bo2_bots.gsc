@@ -597,22 +597,23 @@ bot_buy_box()
         }
 
         dist_sq = DistanceSquared(self.origin, current_box.origin);
-        interaction_dist_sq = 22500;
+        interaction_dist_sq = 25600;
         detection_dist_sq = 1440000;
 
         if(self.score >= 950 && dist_sq < detection_dist_sq)
         {
             if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
             {
-				if(is_true(self.bot.is_reviving))
+				if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving))
 					return;
 				
                 if(dist_sq > interaction_dist_sq)
                 {
-                    if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 22500)
+                    if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 15625)
                     {
-                        self AddGoal(current_box.origin, 150, 2, "boxBuy");
+                        self AddGoal(current_box.origin, 100, 2, "boxBuy");
                     }
+					
                     return;
                 }
 
@@ -1629,12 +1630,12 @@ bot_simulate_revive(teammate)
     
     while(teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
-        self allowattack(0);
-		self pressads(0);
-		
         // Completely ignore zombies for the duration of the revive:
         // clear the tracked threat so bot_combat_think has nothing to aim at,
         // and cancel any movement goal that could pull the bot away.
+		
+        self allowattack(0);
+		self pressads(0);
 		
         self bot_clear_enemy();
 		
@@ -1651,7 +1652,8 @@ bot_simulate_revive(teammate)
             break;
         
         self lookat(teammate.origin);
-        self pressusebutton(2); 
+        self pressusebutton(2);
+		
         wait 0.05;
     }
     
@@ -1751,7 +1753,10 @@ bot_update_wander()
 	{
 		wait 0.1;
 		
-        if(is_true(self.bot.is_reviving) || (isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == self))
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			continue;
+		
+        if(is_true(is_true(self.bot.is_using_box) || self.bot.is_reviving))
             continue;
 		
 		players = get_players();
@@ -1766,9 +1771,14 @@ bot_update_wander()
 		
 		dist_sq = DistanceSquared(self.origin, player.origin);
 		
-		if(dist_sq > 1440000)
+		if(dist_sq > 1960000)
 		{
 			self.bot.is_following = true;
+			
+			if (getDvar("g_type") == "zstandard")
+			{
+				self.bot.is_following = false;
+			}
 		}
 
 		if(self.bot.is_following)
@@ -1783,12 +1793,6 @@ bot_update_wander()
 		}
 		else
 		{
-			if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-				continue;
-			
-			if(self HasGoal("wander") && !isdefined(self.bot.threat.entity) && !isAlive(self.bot.threat.entity))
-				self pressads(0);
-			
 			if(!isDefined(self.bot.last_wander_pos))
 			{
 				self.bot.last_wander_pos = self.origin;
@@ -1805,7 +1809,7 @@ bot_update_wander()
 			
 			if(!self HasGoal("wander") || self AtGoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(player.origin, 800, self);
+				location = get_random_walkable_location(player.origin, 1250, self);
 
 				if(isDefined(location))
 				{
