@@ -597,7 +597,7 @@ bot_buy_box()
         }
 
         dist_sq = DistanceSquared(self.origin, current_box.origin);
-        interaction_dist_sq = 25600;
+        interaction_dist_sq = 22500;
         detection_dist_sq = 1440000;
 
         if(self.score >= 950 && dist_sq < detection_dist_sq)
@@ -611,7 +611,7 @@ bot_buy_box()
                 {
                     if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 15625)
                     {
-                        self AddGoal(current_box.origin, 100, 2, "boxBuy");
+                        self AddGoal(current_box.origin, 125, 2, "boxBuy");
                     }
 					
                     return;
@@ -1771,7 +1771,7 @@ bot_update_wander()
 		
 		dist_sq = DistanceSquared(self.origin, player.origin);
 		
-		if(dist_sq > 1960000)
+		if(dist_sq > 1440000)
 		{
 			self.bot.is_following = true;
 			
@@ -1809,7 +1809,7 @@ bot_update_wander()
 			
 			if(!self HasGoal("wander") || self AtGoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(player.origin, 1250, self);
+				location = get_random_walkable_location(player.origin, 1800, self);
 
 				if(isDefined(location))
 				{
