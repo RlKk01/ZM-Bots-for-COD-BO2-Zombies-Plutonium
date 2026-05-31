@@ -609,9 +609,9 @@ bot_buy_box()
 				
                 if(dist_sq > interaction_dist_sq)
                 {
-                    if(!self hasgoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 15625)
+                    if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 22500)
                     {
-                        self AddGoal(current_box.origin, 125, 2, "boxBuy");
+                        self AddGoal(current_box.origin, 150, 2, "boxBuy");
                     }
 					
                     return;
@@ -659,6 +659,7 @@ bot_buy_box()
 
                 // Start the monitor thread
                 self thread bot_monitor_box_animation(current_box);
+				
                 return; 
             }
         }
@@ -846,8 +847,7 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "thunder") || 
 		IsSubStr(weapon, "slipgun") || 
 		IsSubStr(weapon, "slowgun") || 
-		IsSubStr(weapon, "blundergat") || 
-		IsSubStr(weapon, "blundersplat") || 
+		IsSubStr(weapon, "blunder") || 
 		IsSubStr(weapon, "staff"))
 		return 100;
 		
@@ -928,8 +928,8 @@ bot_buy_wallbuy()
 	
     if (!isDefined(self.bot.wallbuy_purchase_time) || GetTime() > self.bot.wallbuy_purchase_time)
     {
-        // Only attempt to buy a wall-buy every 5 seconds
-        self.bot.wallbuy_purchase_time = GetTime() + 5000;
+        // Only attempt to buy a wall-buy every 3 seconds
+        self.bot.wallbuy_purchase_time = GetTime() + 3000;
 		
 		if(level.round_number <= 3)
 			return;
@@ -981,60 +981,99 @@ bot_buy_wallbuy()
 		
 		foreach(wallbuy in wallbuys)
 		{
-			if(DistanceSquared(wallbuy.origin, self.origin) <= 3240000 && wallbuy.trigger_stub.cost <= self.score)
+			if(DistanceSquared(wallbuy.origin, self.origin) < 3240000 && 
+			   wallbuy.trigger_stub.cost != 500 && 
+			   wallbuy.trigger_stub.cost <= self.score && 
+			   bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
+			   FindPath(self.origin, wallbuy.origin, undefined, 0, 1) && 
+			   weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && 
+			   !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
 			{
-				if(bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
-				   weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && 
-				   !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
-				{
-					if(weapon == upgrade_name)
-						return;
-					
-					if(!isdefined(wallbuy.trigger_stub))
-						return;
-					
-					if(!isdefined(wallbuy.trigger_stub.zombie_weapon_upgrade))
-						return;
-					
-					weaponToBuy = wallbuy;
-					
-					break;
-				}
+				if(weapon == upgrade_name)
+					return;
+				
+				if(!isdefined(wallbuy.trigger_stub))
+					return;
+				
+				if(!isdefined(wallbuy.trigger_stub.zombie_weapon_upgrade))
+					return;
+				
+				weaponToBuy = wallbuy;
+				
+				break;
 			}
 		}
 		
 		if(!isdefined(weaponToBuy))
 			return;
 		
-		self AddGoal(weaponToBuy.origin, 1800, 2, "weaponBuy");
+		if(isDefined(self.bot.wallbuy_nav_expiry) && GetTime() < self.bot.wallbuy_nav_expiry)
+			return;
 		
-		while(!self AtGoal("weaponBuy") && !DistanceSquared(self.origin, weaponToBuy.origin) <= 3240000)
+		self thread bot_navigate_and_buy_wallbuy(weaponToBuy);
+	}
+}
+
+bot_navigate_and_buy_wallbuy(weaponToBuy)
+{
+	self endon("death");
+	self endon("disconnect");
+	level endon("end_game");
+	
+	self.bot.wallbuy_nav_expiry = GetTime() + 10000;
+	
+	self AddGoal(weaponToBuy.origin, 75, 2, "weaponBuy");
+	
+	maxTime = GetTime() + 10000;
+	
+	while(!self AtGoal("weaponBuy") && !DistanceSquared(self.origin, weaponToBuy.origin) < 10000)
+	{
+		wait 1;
+		
+		if(GetTime() > maxTime)
 		{
-			wait 1;
-			
-			if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			{
-				self cancelgoal("weaponBuy");
-				return;
-			}
+			self cancelgoal("weaponBuy");
+			return;
 		}
 		
-		self cancelgoal("weaponBuy");
-		
-		self.bot.is_buying = true;
-		
-		self allowattack(0);
-		self pressads(0);
-		
-		self maps\mp\zombies\_zm_score::minus_to_player_score(weaponToBuy.trigger_stub.cost);
-		
-		self TakeWeapon(weapon);
-		self GiveWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
-		self SwitchToWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
-		self SetSpawnWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
-		
-		self.bot.is_buying = undefined;
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			self cancelgoal("weaponBuy");
+			return;
+		}
 	}
+	
+	self cancelgoal("weaponBuy");
+	
+	// Re-fetch weapon after navigation to avoid stale reference
+	weapon = self GetCurrentWeapon();
+	
+	if(weapon == "none")
+		return;
+	
+	if(!isdefined(weaponToBuy.trigger_stub))
+		return;
+	
+	if(!isdefined(weaponToBuy.trigger_stub.zombie_weapon_upgrade))
+		return;
+	
+	// Re-check score after navigation — bot may have spent points in the meantime
+	if(self.score < weaponToBuy.trigger_stub.cost)
+		return;
+	
+	self.bot.is_buying = true;
+	
+	self allowattack(0);
+	self pressads(0);
+	
+	self maps\mp\zombies\_zm_score::minus_to_player_score(weaponToBuy.trigger_stub.cost);
+	
+	self TakeWeapon(weapon);
+	self GiveWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
+	self SwitchToWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
+	self SetSpawnWeapon(weaponToBuy.trigger_stub.zombie_weapon_upgrade);
+	
+	self.bot.is_buying = undefined;
 }
 
 bot_best_gun(buyingweapon, currentweapon)
@@ -1950,11 +1989,11 @@ bot_weapon_switch_think()
     self endon("disconnect");
     level endon("game_ended");
 
-    wait randomfloatrange(2.0, 3.0);
+    wait randomfloatrange(3.0, 4.0);
 
     for(;;)
     {
-        wait randomfloatrange(2.0, 4.0);
+        wait randomfloatrange(3.0, 5.0);
 
         if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
             continue;
@@ -1985,7 +2024,7 @@ bot_weapon_switch_think()
             self allowattack(0);
             self pressads(0);
             self SwitchToWeapon(weapon);
-            self.bot.next_weapon_switch = getTime() + randomintrange(30000, 75000);
+            self.bot.next_weapon_switch = getTime() + randomintrange(15000, 90000);
         }
     }
 }
@@ -2037,6 +2076,10 @@ bot_weapon_failsafe_monitor()
         
         // Skip checking if the bot is reviving or doing box stuff
         if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+            continue;
+		
+        // Skip on Mob of the Dead while the bot is in afterlife mode
+        if(getDvar("mapname") == "zm_prison" && is_true(self.afterlife))
             continue;
 
         weapon = self GetCurrentWeapon();
