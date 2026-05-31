@@ -513,17 +513,6 @@ bot_buy_box()
         // Don't try if we're in last stand or can't afford it
         if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
             return;
-
-        // Check global box usage tracker
-        if(isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self)
-        {
-            if(self hasgoal("boxBuy"))
-				self cancelgoal("boxBuy");
-			
-            if(self hasgoal("boxGrab"))
-				self cancelgoal("boxGrab");
-            return;
-        }
 		
         // Round-based cooldowns
         if (level.round_number <= 8)
@@ -558,6 +547,7 @@ bot_buy_box()
                 if(level.box_in_use_by_bot == self)
 				level.box_in_use_by_bot = undefined;
             }
+			
             return;
         }
 
@@ -583,6 +573,7 @@ bot_buy_box()
         if(is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
 		   flag("moving_chest_now") || 
 		  (isDefined(current_box.is_locked) && current_box.is_locked) || 
+		  (isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self) || 
 		  (isDefined(current_box.chest_user) && current_box.chest_user != self) || 
 		  (isDefined(level.mystery_box_teddy_locations) && fast_array_contains(level.mystery_box_teddy_locations, current_box.origin))) 
         {
@@ -690,6 +681,7 @@ bot_monitor_box_animation(box)
         if(level.box_in_use_by_bot == self)
 		level.box_in_use_by_bot = undefined;
         self notify("box_usage_complete");
+		
         return;
     }
 
@@ -707,6 +699,7 @@ bot_monitor_box_animation(box)
         if(level.box_in_use_by_bot == self)
 		level.box_in_use_by_bot = undefined;
         self notify("box_usage_complete");
+		
         return;
     }
 
@@ -849,11 +842,13 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "slowgun") || 
 		IsSubStr(weapon, "blunder") || 
 		IsSubStr(weapon, "staff"))
+		
 		return 100;
 		
     // Special Weapons
 	if (IsSubStr(weapon, "minigun") || 
 		IsSubStr(weapon, "titus"))
+		
 		return 99;
 		
     // LMGs
@@ -863,6 +858,7 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "lsat") || 
 		IsSubStr(weapon, "mk48") || 
 		IsSubStr(weapon, "qbb95"))
+		
 		return 95;
     
     // Assault Rifles
@@ -878,6 +874,7 @@ bot_get_weapon_score(weapon)
 	// Shotguns
 		IsSubStr(weapon, "ksg") || 
 		IsSubStr(weapon, "srm1216"))
+		
 		return 90;
     
     // SMGs
@@ -900,11 +897,13 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "fivesevendw") || 
 		IsSubStr(weapon, "beretta93r_extclip") || 
 		IsSubStr(weapon, "judge"))
+		
 		return 80;
 		
 	// Explosives Weapons
 	if (IsSubStr(weapon, "m32") || 
 		IsSubStr(weapon, "usrpg"))
+		
 		return 60;
 	
 	// Weapons that it shouldn't be take it from the box
@@ -914,6 +913,7 @@ bot_get_weapon_score(weapon)
 		IsSubStr(weapon, "time_bomb") || 
 		IsSubStr(weapon, "emp_grenade") || 
 		IsSubStr(weapon, "cymbal_monkey"))
+		
 		return 0;
 
     // Unknown/Custom weapons default to a mid-tier score
@@ -1213,6 +1213,7 @@ bot_buy_perks()
 						{
 							self maps\mp\zombies\_zm_score::minus_to_player_score(costs[i]);
 							self thread maps\mp\zombies\_zm_perks::give_perk(perks[i]);
+							
 							return;
 						}
 					}
@@ -1299,9 +1300,11 @@ bot_buy_door()
             
             // Play purchase sound
             self PlaySound("zmb_cha_ching");
+			
             return true;
         }
     }
+	
     return false;
 }
 
@@ -1415,6 +1418,7 @@ bot_clear_debris()
             if(closestDistSq > 90000) // Reduced interaction range
             {
                 self AddGoal(closestDebris.origin, 300, 2, "debrisClear");
+				
                 return false;
             }
             
@@ -1496,6 +1500,7 @@ bot_clear_debris()
         if(self hasgoal("debrisClear"))
             self cancelgoal("debrisClear");
     }
+	
     return false;
 }
 
@@ -1615,6 +1620,7 @@ bot_revive_teammates()
                  self.bot.revive_target.revive_claimer_count--;
              self.bot.revive_target = undefined;
              self cancelgoal("revive");
+			 
              return;
         }
 	
@@ -1725,6 +1731,7 @@ bot_revive_cleanup_watcher(reviving_bot, teammate)
                 if(isDefined(teammate.revive_claimer_count) && teammate.revive_claimer_count > 0)
                     teammate.revive_claimer_count--;
             }
+			
             return;
         }
         
@@ -1737,6 +1744,7 @@ bot_revive_cleanup_watcher(reviving_bot, teammate)
                 if(isDefined(teammate.revive_claimer_count) && teammate.revive_claimer_count > 0)
                     teammate.revive_claimer_count--;
             }
+			
             return;
         }
         
@@ -1748,6 +1756,7 @@ bot_revive_cleanup_watcher(reviving_bot, teammate)
                 if(isDefined(teammate.revive_claimer_count) && teammate.revive_claimer_count > 0)
                     teammate.revive_claimer_count--;
             }
+			
             return;
         }
     }
@@ -2402,6 +2411,7 @@ bot_failsafe_node_valid(nearest, node)
 	{
 		return 1;
 	}
+	
 	return 0;
 }
 
