@@ -2078,6 +2078,7 @@ bot_weapon_failsafe_monitor()
 {
     self endon("death");
     self endon("disconnect");
+	level endon("game_ended");
     
     for(;;)
     {
@@ -2085,6 +2086,12 @@ bot_weapon_failsafe_monitor()
         
         // Skip checking if the bot is reviving or doing box stuff
         if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+            continue;
+		
+        if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
+            continue;
+		
+        if(!self isonground())
             continue;
 		
         // Skip on Mob of the Dead while the bot is in afterlife mode
@@ -2114,10 +2121,11 @@ bot_weapon_failsafe_monitor()
                 fallback_weapon = "mp44_zm";
             }
             
-            self GiveWeapon(fallback_weapon);
-            self GiveMaxAmmo(fallback_weapon);
-            self SwitchToWeapon(fallback_weapon);
-            self SetSpawnWeapon(fallback_weapon);
+			if (weapon != "none")
+				self TakeWeapon(weapon);
+			self GiveWeapon(fallback_weapon);
+			self SwitchToWeapon(fallback_weapon);
+			self SetSpawnWeapon(fallback_weapon);
         }
     }
 }

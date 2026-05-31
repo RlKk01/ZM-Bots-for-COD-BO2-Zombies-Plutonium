@@ -20,7 +20,10 @@ bot_combat_think(damage, attacker, direction)
 	{
 		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 		{
-			self.bot.next_flee_scan = getTime() + 1000;
+			if (get_players().size > 5)
+				self.bot.next_flee_scan = getTime() + 2000;
+			else
+				self.bot.next_flee_scan = getTime() + 1000;
 			
 			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
             
@@ -344,7 +347,7 @@ bot_update_aim(frames)
 
 		// Distance correction
 		if (dist >= 800)
-			aim_offset -= 5;
+			aim_offset -= 10;
 		else if (dist <= 600)
 			aim_offset += 10;
 
