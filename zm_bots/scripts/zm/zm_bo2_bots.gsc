@@ -1041,6 +1041,25 @@ bot_navigate_and_buy_wallbuy(weaponToBuy)
 			self cancelgoal("weaponBuy");
 			return;
 		}
+		
+        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+		{
+			self cancelgoal("weaponBuy");
+			return;
+		}
+		
+        if(!self isonground())
+		{
+			self cancelgoal("weaponBuy");
+			return;
+		}
+		
+        // Skip on Mob of the Dead while the bot is in afterlife mode
+        if(getDvar("mapname") == "zm_prison" && is_true(self.afterlife))
+		{
+			self cancelgoal("weaponBuy");
+			return;
+		}
 	}
 	
 	self cancelgoal("weaponBuy");
@@ -1521,8 +1540,8 @@ bot_pickup_powerup()
 
 		foreach(powerup in powerups)
 		{
-			// Skip checks if the bot is currently reviving someone
-			if(is_true(self.bot.is_reviving))
+			// Skip checks if the bot is currently reviving someone or doing box stuff or buying a wall-buy
+			if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
 				continue;
 			
 			// Make the bot avoid picking up the nuke powerup
@@ -1804,7 +1823,7 @@ bot_update_wander()
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 			continue;
 		
-        if(is_true(is_true(self.bot.is_using_box) || self.bot.is_reviving))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
             continue;
 		
 		players = get_players();
@@ -2062,18 +2081,6 @@ bot_switch_weapon(current_weapon, primaries)
     return candidates[randomint(candidates.size)];
 }
 
-bot_stand_fix()
-{
-	self endon("death");
-	self endon("disconnect");
-	level endon("end_game");
-	
-	if (self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
-	{
-		self botaction(BOT_ACTION_STAND);
-	}
-}
-
 bot_weapon_failsafe_monitor()
 {
     self endon("death");
@@ -2128,6 +2135,18 @@ bot_weapon_failsafe_monitor()
 			self SetSpawnWeapon(fallback_weapon);
         }
     }
+}
+
+bot_stand_fix()
+{
+	self endon("death");
+	self endon("disconnect");
+	level endon("end_game");
+	
+	if (self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
+	{
+		self botaction(BOT_ACTION_STAND);
+	}
 }
 
 // Optimized array contains - using direct index instead of loop for common case

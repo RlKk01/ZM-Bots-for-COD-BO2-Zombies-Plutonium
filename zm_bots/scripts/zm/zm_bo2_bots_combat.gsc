@@ -347,7 +347,7 @@ bot_update_aim(frames)
 
 		// Distance correction
 		if (dist >= 800)
-			aim_offset -= 10;
+			aim_offset -= 15;
 		else if (dist <= 600)
 			aim_offset += 10;
 
