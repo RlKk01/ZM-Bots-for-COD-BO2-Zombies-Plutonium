@@ -1815,7 +1815,9 @@ bot_update_wander()
 	self endon("death");
 	self endon("disconnect");
 	level endon("game_ended");
-
+	
+	self.bot.is_survival = (getDvar("g_gametype") == "zstandard") || (isDefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
+	
 	for(;;)
 	{
 		wait 0.1;
@@ -1840,12 +1842,10 @@ bot_update_wander()
 		
 		if(dist_sq > 1440000)
 		{
-			self.bot.is_following = true;
-			
-			if (getDvar("g_type") == "zstandard")
-			{
+			if (self.bot.is_survival)
 				self.bot.is_following = false;
-			}
+			else
+				self.bot.is_following = true;
 		}
 
 		if(self.bot.is_following)
@@ -1876,7 +1876,7 @@ bot_update_wander()
 			
 			if(!self HasGoal("wander") || self AtGoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(player.origin, 1800, self);
+				location = get_random_walkable_location(self.origin, 1000, self);
 
 				if(isDefined(location))
 				{

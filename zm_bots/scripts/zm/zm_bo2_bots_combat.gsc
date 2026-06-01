@@ -343,7 +343,7 @@ bot_update_aim(frames)
 		
 		height = centroid[2] - prediction[2];
 		
-		aim_offset = 10;
+		aim_offset = 15;
 
 		// Distance correction
 		if (dist >= 800)
