@@ -20,7 +20,7 @@ bot_combat_think(damage, attacker, direction)
 	{
 		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 		{
-			if (get_players().size > 5)
+			if (get_players().size > 4)
 				self.bot.next_flee_scan = getTime() + 2000;
 			else
 				self.bot.next_flee_scan = getTime() + 1000;
