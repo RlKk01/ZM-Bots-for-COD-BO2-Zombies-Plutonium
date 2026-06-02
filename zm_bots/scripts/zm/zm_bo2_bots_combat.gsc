@@ -312,8 +312,6 @@ bot_update_lookat(origin, frac)
 bot_update_aim(frames)
 {
 	ent = self.bot.threat.entity;
-	
-	weapon = self GetCurrentWeapon();
 
 	if (!isDefined(ent.origin))
 		return self.origin;
@@ -343,13 +341,13 @@ bot_update_aim(frames)
 		
 		height = centroid[2] - prediction[2];
 		
-		aim_offset = 15;
+		aim_offset = 12;
 
 		// Distance correction
 		if (dist >= 800)
-			aim_offset -= 15;
+			aim_offset -= 12;
 		else if (dist <= 600)
-			aim_offset += 10;
+			aim_offset += 12;
 
 		return prediction + (0, 0, height + aim_offset);
 	}
