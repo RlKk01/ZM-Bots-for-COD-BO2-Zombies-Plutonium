@@ -931,7 +931,7 @@ bot_buy_wallbuy()
         // Only attempt to buy a wall-buy every 3 seconds
         self.bot.wallbuy_purchase_time = GetTime() + 3000;
 		
-		if(level.round_number <= 3)
+		if(level.round_number <= 2)
 			return;
 	
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
@@ -1834,9 +1834,6 @@ bot_update_wander()
             continue;
 		
 		player = players[0];
-		
-        if(!isDefined(player) || player maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-            continue;
 		
 		dist_sq = DistanceSquared(self.origin, player.origin);
 		
