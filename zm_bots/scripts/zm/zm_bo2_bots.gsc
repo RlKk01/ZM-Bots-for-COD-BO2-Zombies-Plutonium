@@ -1891,26 +1891,20 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
-	tries = 0;
-	
-	for(;;)
-	{
-		x = origin[0] + randomintrange(range * -1, range);
-		y = origin[1] + randomintrange(range * -1, range);
-		z = origin[2] + randomintrange(range * -1, range);
-		
-		if(check_point_in_playable_area((x,y,z)))
-			return (x,y,z);
-		
-		if(tries >= 15)
-		{
-			return origin;
-		}
-		
-		tries ++;
-		
-		wait 0.05;
-	}
+    nodes = getnodesinradiussorted(origin, range, 50, 20);
+
+    if(isDefined(nodes) && nodes.size > 0)
+    {
+        nodes = array_randomize(nodes);
+
+        foreach(node in nodes)
+        {
+            if(check_point_in_playable_area(node.origin))
+                return node.origin;
+        }
+    }
+
+    return origin;
 }
 
 manual_bot_teleport_monitor()
