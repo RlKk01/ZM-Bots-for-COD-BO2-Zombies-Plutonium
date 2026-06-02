@@ -193,7 +193,7 @@ onspawn()
 		self waittill("spawned_player");
 		
 		self thread bot_spawn();
-		self thread bot_perks();
+		self thread bot_health();
 		self thread bot_perks_origins();
 	}
 }
@@ -218,7 +218,7 @@ bot_spawn()
 	self thread bot_weapon_failsafe_monitor();
 }
 
-bot_perks()
+bot_health()
 {
 	self endon("disconnect");
 	self endon("death");
@@ -1891,7 +1891,7 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
-	if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
+	if (getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
 	{
 		nodes = getnodesinradiussorted(origin, range, 50, 20);
 		
