@@ -646,7 +646,7 @@ bot_buy_box()
     }
 	
     dist_sq = DistanceSquared(self.origin, current_box.origin);
-    interaction_dist_sq = 25600;
+    interaction_dist_sq = 30625;
     detection_dist_sq = 1440000;
 	
     if(self.score >= 950 && dist_sq < detection_dist_sq)
@@ -658,7 +658,7 @@ bot_buy_box()
 			
             if(dist_sq > interaction_dist_sq)
             {
-                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 25600)
+                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 10000)
                 {
                     self AddGoal(current_box.origin, 150, 2, "boxBuy");
                 }
