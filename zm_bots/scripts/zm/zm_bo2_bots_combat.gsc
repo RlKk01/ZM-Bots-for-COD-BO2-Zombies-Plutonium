@@ -16,14 +16,14 @@ bot_combat_think(damage, attacker, direction)
 	if(self atgoal("flee"))
 		self cancelgoal("flee");
 
-	if((distancesquared(self.origin, self.bot.threat.position) <= 40000 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	if((distancesquared(self.origin, self.bot.threat.position) <= 4096 || isdefined(damage)) && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
 	{
 		if (!isDefined(self.bot.next_flee_scan) || getTime() > self.bot.next_flee_scan)
 		{
-			if (get_players().size > 4)
-				self.bot.next_flee_scan = getTime() + 2000;
+			if (get_players().size > 5)
+				self.bot.next_flee_scan = getTime() + 2500;
 			else
-				self.bot.next_flee_scan = getTime() + 1000;
+				self.bot.next_flee_scan = getTime() + 500;
 			
 			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
             
@@ -36,6 +36,7 @@ bot_combat_think(damage, attacker, direction)
 					if (!nodesvisible(nearest, node) && randomint(100) < 25 && FindPath(self.origin, node.origin, undefined, 0, 1))
 					{
 						self addgoal(node.origin, 24, 4, "flee");
+						
 						break;
 					}
 				}
