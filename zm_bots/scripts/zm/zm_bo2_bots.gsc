@@ -932,9 +932,9 @@ bot_get_weapon_score(weapon)
     switch(weaponclass(weapon))
     {
         case "mg":              return 90;  // LMGs
+		case "spread":          return 90;  // Shotguns
         case "rifle":           return 80;  // Assault Rifles
-        case "spread":          return 70;  // Shotguns
-        case "smg":             return 65;  // SMGs
+        case "smg":             return 70;  // SMGs
 		case "rocketlauncher":  return 60;  // Launchers
 		default:                return 55;  // Unknown / fallback
 		case "pistol":          return 50;  // Handguns
@@ -959,7 +959,7 @@ bot_buy_wallbuy()
 	weapon = self GetCurrentWeapon();
 	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 	
-    if(bot_get_weapon_score(weapon) >= 65)
+    if(bot_get_weapon_score(weapon) >= 70)
     {
         self CancelGoal("weaponBuy");
         return;
@@ -1983,8 +1983,14 @@ bot_weapon_failsafe_monitor()
                 fallback_weapon = "mp44_zm";
             }
             
-			if (weapon != "none" && isDefined(primaries) && primaries.size > 0)
+			if (weapon != "none")
 				self TakeWeapon(weapon);
+			
+			if (isDefined(primaries) && primaries.size > 0)
+			{
+				for (i = 0; i < primaries.size; i++)
+					self TakeWeapon(primaries[i]);
+			}
 			
 			self GiveWeapon(fallback_weapon);
 			self SwitchToWeapon(fallback_weapon);
