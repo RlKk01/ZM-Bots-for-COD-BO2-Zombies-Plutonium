@@ -576,27 +576,8 @@ bot_buy_box()
     if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
         return;
 	
-    // Round-based cooldowns
-    if(level.round_number <= 8)
-	{
-        if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 120000))
-			return;
-    }
-	else if(level.round_number <= 15)
-	{
-        if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 180000))
-			return;
-    }
-	else if(level.round_number <= 25)
-	{
-        if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 220000))
-			return;
-    }
-	else
-	{
-        if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < 300000))
-			return;
-    }
+	if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < self.bot.box_cooldown_duration))
+		return;
     
     // Check if we already paid and are waiting for the animation
     if(is_true(self.bot.waiting_for_box_animation))
@@ -647,7 +628,7 @@ bot_buy_box()
 	
     dist_sq = DistanceSquared(self.origin, current_box.origin);
     interaction_dist_sq = 30625;
-    detection_dist_sq = 1440000;
+    detection_dist_sq = 640000;
 	
     if(self.score >= 950 && dist_sq < detection_dist_sq)
     {
@@ -658,7 +639,7 @@ bot_buy_box()
 			
             if(dist_sq > interaction_dist_sq)
             {
-                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 10000)
+                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 22500)
                 {
                     self AddGoal(current_box.origin, 150, 2, "boxBuy");
                 }
@@ -827,6 +808,7 @@ bot_monitor_box_animation(box)
 					box notify("trigger", self);
 					self UseButtonPressed();
 				}
+				
                 wait 0.5;
                 
                 // Check if weapon was actually taken
@@ -840,6 +822,11 @@ bot_monitor_box_animation(box)
         }
 		
 		self.bot.last_box_interaction_time = GetTime();
+		
+		if(level.round_number <= 15)
+			self.bot.box_cooldown_duration = randomintrange(180000, 300000);
+		else
+			self.bot.box_cooldown_duration = randomintrange(300000, 600000);
     }
     
     // Cleanup
@@ -959,7 +946,7 @@ bot_buy_wallbuy()
 	weapon = self GetCurrentWeapon();
 	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 	
-    if(bot_get_weapon_score(weapon) >= 70)
+    if(bot_get_weapon_score(weapon) >= 80)
     {
         self CancelGoal("weaponBuy");
         return;
@@ -1096,6 +1083,9 @@ bot_pack_gun()
 {
     if(level.round_number >= 10)
 	{
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			return;
+		
 		if(!self bot_should_pack())
 			return;
 		
@@ -1228,15 +1218,15 @@ bot_buy_perks()
 
 bot_buy_door()
 {
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		return;
+	
     // Get all potential doors
     doors = get_cached_doors(); // Use cached doors
     
     // Find the closest valid door
     closestDoor = undefined;
     closestDistSq = 90000; // Reduced max distance for realism
-	
-	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-		return;
 	
     foreach(door in doors)
     {
@@ -1304,9 +1294,10 @@ bot_clear_debris()
 {
 	// Skip Buried Map
 	if(getDvar("mapname") == "zm_buried")
-	{
 		return;
-	}
+	
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		return;
 	
     // Get all potential debris piles
     debris = get_cached_debris(); // Use cached debris
@@ -1317,9 +1308,6 @@ bot_clear_debris()
     // Find the closest valid debris pile
     closestDebris = undefined;
     closestDistSq = 160000; // Reduced max distance for realism
-	
-	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-		return;
     
     foreach(pile in debris)
     {
@@ -1875,6 +1863,9 @@ bot_weapon_switch_think()
     for(;;)
     {
         wait randomfloatrange(3.0, 5.0);
+		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			continue;
 
         if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
             continue;
@@ -1944,7 +1935,10 @@ bot_weapon_failsafe_monitor()
     
     for(;;)
     {
-        wait 1; 
+        wait 1;
+		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			continue;
         
         // Skip checking if the bot is reviving or doing box stuff
         if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
@@ -2004,6 +1998,9 @@ bot_stand_fix()
 	self endon("death");
 	self endon("disconnect");
 	level endon("end_game");
+	
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		return;
 	
 	if (self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
 	{
