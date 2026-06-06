@@ -576,6 +576,7 @@ bot_buy_box()
     if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
         return;
 	
+	// Cooldown for bot not spamming the box if already has taken a weapon from it
 	if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < self.bot.box_cooldown_duration))
 		return;
     
@@ -639,9 +640,9 @@ bot_buy_box()
 			
             if(dist_sq > interaction_dist_sq)
             {
-                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 22500)
+                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 30625)
                 {
-                    self AddGoal(current_box.origin, 150, 2, "boxBuy");
+                    self AddGoal(current_box.origin, 175, 2, "boxBuy");
                 }
 				
                 return;
