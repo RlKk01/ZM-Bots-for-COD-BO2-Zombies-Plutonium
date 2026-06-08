@@ -75,12 +75,12 @@ bot_combat_main()
 	weapon = self getcurrentweapon();
 	
 	// Force bot to finish reloading until clip is full
-	if (self isreloading())
+	if(self isreloading())
 	{
 		clip = self getweaponammoclip(weapon);
 		max = weaponclipsize(weapon);
 
-		if (clip < max)
+		if(clip < max)
 		{
 			self.bot.reload_until_full = true;
 		}
@@ -88,7 +88,7 @@ bot_combat_main()
 	
 	currentammo = self getweaponammoclip(weapon) + self getweaponammostock(weapon);
 	
-	if (!currentammo)
+	if(!currentammo)
 	{
 		return;
 	}
@@ -97,12 +97,12 @@ bot_combat_main()
 	
 	time = getTime();
 	
-	if (!self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
+	if(!self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
 	{
 		ads = 1;
 	}
 	
-	if (ads)
+	if(ads)
 	{
 		self pressads(1);
 	}
@@ -113,14 +113,14 @@ bot_combat_main()
 	
 	frames = 4;
 	
-	if (time >= self.bot.threat.time_aim_correct)
+	if(time >= self.bot.threat.time_aim_correct)
 	{
 		self.bot.threat.time_aim_correct += self.bot.threat.time_aim_interval;
 		
 		frac = (time - self.bot.threat.time_first_sight) / 100;
 		frac = clamp(frac, 0, 1);
 		
-		if (!threat_is_player())
+		if(!threat_is_player())
 		{
 			frac = 1;
 		}
@@ -130,13 +130,13 @@ bot_combat_main()
 		self bot_update_lookat(self.bot.threat.aim_target, frac);
 	}
 	
-	if (isDefined(self.bot.reload_until_full) && self.bot.reload_until_full)
+	if(isDefined(self.bot.reload_until_full) && self.bot.reload_until_full)
 	{
 		clip = self getweaponammoclip(weapon);
 		max = weaponclipsize(weapon);
 
 		// Fail-safe: If the clip is full, OR the physical reload was interrupted
-		if (clip >= max || !self isreloading())
+		if(clip >= max || !self isreloading())
 		{
 			self.bot.reload_until_full = undefined;
 		}
@@ -148,7 +148,7 @@ bot_combat_main()
 		}
 	}
 	
-	if (self bot_on_target(self.bot.threat.entity.origin, 100))
+	if(self bot_on_target(self.bot.threat.entity.origin, 100))
 	{
 		self allowattack(1);
 	}
@@ -157,7 +157,7 @@ bot_combat_main()
 		self allowattack(0);
 	}
 	
-	if (is_true(self.stingerlockstarted))
+	if(is_true(self.stingerlockstarted))
 	{
 		self allowattack(self.stingerlockfinalized);
 		return;
@@ -181,19 +181,19 @@ bot_should_hip_fire()
 	
 	weapon = self getcurrentweapon();
 	
-	if (weapon == "none")
+	if(weapon == "none")
 	{
 		return 0;
 	}
 	
-	if (weaponisdualwield(weapon))
+	if(weaponisdualwield(weapon))
 	{
 		return 1;
 	}
 	
 	class = weaponclass(weapon);
 	
-	if (isplayer(enemy) && class == "spread")
+	if(isplayer(enemy) && class == "spread")
 	{
 		return 1;
 	}
@@ -229,7 +229,7 @@ bot_should_hip_fire()
 			break;
 	}
 	
-	if (isweaponscopeoverlay(weapon))
+	if(isweaponscopeoverlay(weapon))
 	{
 		distcheck = 500;
 	}
@@ -239,36 +239,36 @@ bot_should_hip_fire()
 
 bot_patrol_near_enemy(damage, attacker, direction)
 {
-	if (isDefined(attacker))
+	if(isDefined(attacker))
 	{
 		self bot_lookat_entity(attacker);
 	}
 	
-	if (!isDefined(attacker))
+	if(!isDefined(attacker))
 	{
 		attacker = self bot_get_closest_enemy(self.origin);
 	}
 	
-	if (!isDefined(attacker))
+	if(!isDefined(attacker))
 	{
 		return;
 	}
 	
 	node = bot_nearest_node(attacker.origin);
 	
-	if (!isDefined(node))
+	if(!isDefined(node))
 	{
 		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "Path", 8);
 		
-		if (nodes.size)
+		if(nodes.size)
 		{
 			node = nodes[0];
 		}
 	}
 	
-	if (isDefined(node))
+	if(isDefined(node))
 	{
-		if (isDefined(damage))
+		if(isDefined(damage))
 		{
 			self addgoal(node, 24, 4, "enemy_patrol");
 			return;
@@ -282,9 +282,9 @@ bot_patrol_near_enemy(damage, attacker, direction)
 
 bot_lookat_entity(entity)
 {
-	if (isplayer(entity) && entity getstance() != "prone")
+	if(isplayer(entity) && entity getstance() != "prone")
 	{
-		if (distancesquared(self.origin, entity.origin) < 65536)
+		if(distancesquared(self.origin, entity.origin) < 65536)
 		{
 			origin = entity getcentroid() + vectorScale((0, 0, 1), 10);
 			self lookat(origin);
@@ -294,7 +294,7 @@ bot_lookat_entity(entity)
 	
 	offset = target_getoffset(entity);
 	
-	if (isDefined(offset))
+	if(isDefined(offset))
 	{
 		self lookat(entity.origin + offset);
 	}
@@ -306,7 +306,7 @@ bot_lookat_entity(entity)
 
 bot_update_lookat(origin, frac)
 {
-    if (!isDefined(self.bot.threat.entity))
+    if(!isDefined(self.bot.threat.entity))
         return;
 
     self lookat(origin);
@@ -316,18 +316,18 @@ bot_update_aim(frames)
 {
 	ent = self.bot.threat.entity;
 
-	if (!isDefined(ent.origin))
+	if(!isDefined(ent.origin))
 		return self.origin;
 
 	distsq = distancesquared(self.origin, ent.origin);
 	dist = sqrt(distsq);
 
 	// Scale prediction based on distance
-	if (dist > 1200) 
+	if(dist > 1200) 
 		frames = 12;
-	else if (dist > 800) 
+	else if(dist > 800) 
 		frames = 9;
-	else if (dist > 400) 
+	else if(dist > 400) 
 		frames = 6;
 	else 
 		frames = 4;
@@ -338,7 +338,7 @@ bot_update_aim(frames)
 	vel = ent getvelocity();
 	prediction += vel * 0.07;
 
-	if (!threat_is_player())
+	if(!threat_is_player())
 	{
 		centroid = ent getcentroid();
 		
@@ -347,9 +347,9 @@ bot_update_aim(frames)
 		aim_offset = 12;
 
 		// Distance correction
-		if (dist >= 800)
+		if(dist >= 800)
 			aim_offset -= 12;
-		else if (dist <= 600)
+		else if(dist <= 600)
 			aim_offset += 12;
 
 		return prediction + (0, 0, height + aim_offset);
@@ -368,7 +368,7 @@ bot_on_target(aim_target, radius)
 	len = distance(aim_target, origin);
 	end = origin + (forward * len);
 	
-	if (distancesquared(aim_target, end) < (radius * radius))
+	if(distancesquared(aim_target, end) < (radius * radius))
 	{
 		return 1;
 	}
@@ -378,7 +378,7 @@ bot_on_target(aim_target, radius)
 
 bot_has_lmg()
 {
-	if (bot_has_weapon_class("mg"))
+	if(bot_has_weapon_class("mg"))
 	{
 		return 1;
 	}
@@ -388,19 +388,19 @@ bot_has_lmg()
 
 bot_has_weapon_class(class)
 {
-	if (self isreloading())
+	if(self isreloading())
 	{
 		return 0;
 	}
 	
 	weapon = self getcurrentweapon();
 	
-	if (weapon == "none")
+	if(weapon == "none")
 	{
 		return 0;
 	}
 	
-	if (weaponclass(weapon) == class)
+	if(weaponclass(weapon) == class)
 	{
 		return 1;
 	}
@@ -412,17 +412,17 @@ bot_can_reload()
 {
 	weapon = self getcurrentweapon();
 	
-	if (weapon == "none")
+	if(weapon == "none")
 	{
 		return 0;
 	}
 	
-	if (!self getweaponammostock(weapon))
+	if(!self getweaponammostock(weapon))
 	{
 		return 0;
 	}
 	
-	if (self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
+	if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
 	{
 		return 0;
 	}
@@ -439,13 +439,13 @@ bot_best_enemy()
 	
 	while (i < enemies.size)
 	{
-		if (threat_should_ignore(enemies[i]))
+		if(threat_should_ignore(enemies[i]))
 		{
 			i++;
 			continue;
 		}
 		
-		if (self botsighttracepassed(enemies[i]))
+		if(self botsighttracepassed(enemies[i]))
 		{
 			self.bot.threat.entity = enemies[i];
 			self.bot.threat.time_first_sight = getTime();
@@ -462,21 +462,21 @@ bot_best_enemy()
 
 bot_weapon_ammo_frac()
 {
-	if (self isreloading() || self isswitchingweapons())
+	if(self isreloading() || self isswitchingweapons())
 	{
 		return 0;
 	}
 	
 	weapon = self getcurrentweapon();
 	
-	if (weapon == "none")
+	if(weapon == "none")
 	{
 		return 1;
 	}
 	
 	total = weaponclipsize(weapon);
 	
-	if (total <= 0)
+	if(total <= 0)
 	{
 		return 1;
 	}
@@ -488,19 +488,19 @@ bot_weapon_ammo_frac()
 
 bot_select_weapon()
 {
-	if (self isthrowinggrenade() || self isswitchingweapons() || self isreloading())
+	if(self isthrowinggrenade() || self isswitchingweapons() || self isreloading())
 	{
 		return;
 	}
 	
-	if (!self isonground())
+	if(!self isonground())
 	{
 		return;
 	}
 	
 	ent = self.bot.threat.entity;
 	
-	if (!isDefined(ent))
+	if(!isDefined(ent))
 	{
 		return;
 	}
@@ -510,16 +510,16 @@ bot_select_weapon()
 	stock = self getweaponammostock(weapon);
 	clip = self getweaponammoclip(weapon);
 	
-	if (weapon == "none")
+	if(weapon == "none")
 	{
 		return;
 	}
 	
-	if (weapon == "fhj18_mp" && !target_istarget(ent))
+	if(weapon == "fhj18_mp" && !target_istarget(ent))
 	{
 		foreach (primary in primaries)
 		{
-			if (primary != weapon)
+			if(primary != weapon)
 			{
 				self switchtoweapon(primary);
 				return;
@@ -529,11 +529,11 @@ bot_select_weapon()
 		return;
 	}
 	
-	if (!clip)
+	if(!clip)
 	{
-		if (stock)
+		if(stock)
 		{
-			if (weaponhasattachment(weapon, "fastreload"))
+			if(weaponhasattachment(weapon, "fastreload"))
 			{
 				return;
 			}
@@ -543,13 +543,13 @@ bot_select_weapon()
 		
 		while (i < primaries.size)
 		{
-			if (primaries[i] == weapon || primaries[i] == "fhj18_mp")
+			if(primaries[i] == weapon || primaries[i] == "fhj18_mp")
 			{
 				i++;
 				continue;
 			}
 			
-			if (self getweaponammoclip(primaries[i]))
+			if(self getweaponammoclip(primaries[i]))
 			{
 				self switchtoweapon(primaries[i]);
 				return;
@@ -557,13 +557,13 @@ bot_select_weapon()
 			i++;
 		}
 		
-		if (self bot_has_lmg())
+		if(self bot_has_lmg())
 		{
 			i = 0;
 			
 			while (i < primaries.size)
 			{
-				if (primaries[i] == weapon || primaries[i] == "fhj18_mp")
+				if(primaries[i] == weapon || primaries[i] == "fhj18_mp")
 				{
 					i++;
 					continue;
@@ -581,17 +581,17 @@ bot_select_weapon()
 
 bot_can_do_combat()
 {
-	if (self ismantling() || self isonladder())
+	if(self ismantling() || self isonladder())
 	{
 		return 0;
 	}
 	
-	if (is_true(self.bot.is_using_box))
+	if(is_true(self.bot.is_using_box))
 	{
 		return 0;
 	}
 	
-	if (is_true(self.bot.is_reviving))
+	if(is_true(self.bot.is_reviving))
 	{
 		return 0;
 	}
@@ -623,7 +623,7 @@ bot_clear_enemy()
 
 bot_has_enemy()
 {
-	if (isDefined(self.bot.threat.entity))
+	if(isDefined(self.bot.threat.entity))
 	{
 		return 1;
 	}
@@ -633,11 +633,11 @@ bot_has_enemy()
 
 threat_dead()
 {
-	if (self bot_has_enemy())
+	if(self bot_has_enemy())
 	{
 		ent = self.bot.threat.entity;
 		
-		if (!isalive(ent))
+		if(!isalive(ent))
 		{
 			return 1;
 		}
@@ -652,7 +652,7 @@ threat_is_player()
 {
 	ent = self.bot.threat.entity;
 	
-	if (isDefined(ent) && isplayer(ent))
+	if(isDefined(ent) && isplayer(ent))
 	{
 		return 1;
 	}

@@ -19,6 +19,7 @@ track_players_intersection_tracker()
 {
     self endon("disconnect");
     self endon("death");
+	
     level endon("end_game");
 	
     wait 5;
@@ -170,7 +171,7 @@ spawn_bot()
 	
 	bot thread maps\mp\zombies\_zm::spawnspectator();
 	
-	if (isDefined(bot))
+	if(isDefined(bot))
 	{
 		bot.pers["isBot"] = 1;
 		bot thread onspawn();
@@ -184,6 +185,7 @@ spawn_bot()
 onspawn()
 {
 	self endon("disconnect");
+	
 	level endon("end_game");
 	
 	// Clean up box usage if this bot disconnects
@@ -225,11 +227,13 @@ bot_health()
 	self endon("disconnect");
 	self endon("death");
 	
+	level endon("end_game");
+	
 	wait 1;
 	
 	while(1)
 	{
-		if (get_players().size > 4)
+		if(get_players().size > 4)
 		{
 			self SetNormalHealth(1500);
 			self SetmaxHealth(1500);
@@ -249,7 +253,9 @@ bot_perks_origins()
 	self endon("disconnect");
 	self endon("death");
 	
-	if (getDvar("mapname") == "zm_tomb")
+	level endon("end_game");
+	
+	if(getDvar("mapname") == "zm_tomb")
 	{
 		wait 1;
 		
@@ -267,7 +273,7 @@ bot_perks_origins()
 // Zombie cache
 init_zombie_cache()
 {
-	if (!isDefined(level.zombie_cache))
+	if(!isDefined(level.zombie_cache))
 	{
 		level.zombie_cache = [];
 		level.zombie_cache_time = 0;
@@ -282,7 +288,7 @@ get_cached_zombies()
 	current_time = getTime();
 	
 	// Refresh cache if expired
-	if (current_time - level.zombie_cache_time > level.zombie_cache_refresh)
+	if(current_time - level.zombie_cache_time > level.zombie_cache_refresh)
 	{
 		level.zombie_cache = undefined;
 		level.zombie_cache = getaispeciesarray(level.zombie_team, "all");
@@ -295,7 +301,7 @@ get_cached_zombies()
 // Vending machine cache
 init_vending_cache()
 {
-    if (!isDefined(level.vending_cache))
+    if(!isDefined(level.vending_cache))
     {
         level.vending_cache = getEntArray("zombie_vending", "targetname");
         level.vending_cache_time = 0;
@@ -310,7 +316,7 @@ get_cached_vending_machines()
     current_time = getTime();
     
     // Refresh cache if expired
-    if (current_time - level.vending_cache_time > level.vending_cache_refresh)
+    if(current_time - level.vending_cache_time > level.vending_cache_refresh)
     {
         level.vending_cache = getEntArray("zombie_vending", "targetname");
         level.vending_cache_time = current_time;
@@ -322,7 +328,7 @@ get_cached_vending_machines()
 // Door cache
 init_door_cache()
 {
-    if (!isDefined(level.door_cache))
+    if(!isDefined(level.door_cache))
     {
         level.door_cache = getEntArray("zombie_door", "targetname");
         level.door_cache_time = 0;
@@ -336,7 +342,7 @@ get_cached_doors()
     
     current_time = getTime();
     
-    if (current_time - level.door_cache_time > level.door_cache_refresh)
+    if(current_time - level.door_cache_time > level.door_cache_refresh)
     {
         level.door_cache = getEntArray("zombie_door", "targetname");
         level.door_cache_time = current_time;
@@ -348,7 +354,7 @@ get_cached_doors()
 // Debris cache
 init_debris_cache()
 {
-    if (!isDefined(level.debris_cache))
+    if(!isDefined(level.debris_cache))
     {
         level.debris_cache = getEntArray("zombie_debris", "targetname");
         level.debris_cache_time = 0;
@@ -362,7 +368,7 @@ get_cached_debris()
     
     current_time = getTime();
     
-    if (current_time - level.debris_cache_time > level.debris_cache_refresh)
+    if(current_time - level.debris_cache_time > level.debris_cache_refresh)
     {
         level.debris_cache = getEntArray("zombie_debris", "targetname");
         level.debris_cache_time = current_time;
@@ -415,7 +421,7 @@ bot_spawn_init()
 	
 	time = getTime();
 	
-	if (!isDefined(self.bot))
+	if(!isDefined(self.bot))
 	{
 		self.bot = spawnstruct();
 		self.bot.threat = spawnstruct();
@@ -451,9 +457,10 @@ bot_spawn_init()
 
 bot_main()
 {
-	self endon("death");
 	self endon("disconnect");
-	level endon("game_ended");
+	self endon("death");
+	
+	level endon("end_game");
 
 	self thread bot_wakeup_think();
 	self thread bot_damage_think();
@@ -574,7 +581,12 @@ bot_buy_box()
 {
 	// Don't try if we're in last stand or can't afford it
     if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
+    {
+        if(self hasgoal("boxBuy"))
+            self cancelgoal("boxBuy");
+		
         return;
+    }
 	
 	// Cooldown for bot not spamming the box if already has taken a weapon from it
 	if(isDefined(self.bot.last_box_interaction_time) && (GetTime() - self.bot.last_box_interaction_time < self.bot.box_cooldown_duration))
@@ -629,20 +641,25 @@ bot_buy_box()
 	
     dist_sq = DistanceSquared(self.origin, current_box.origin);
     interaction_dist_sq = 30625;
-    detection_dist_sq = 640000;
+	detection_dist_sq = 1440000;
 	
     if(self.score >= 950 && dist_sq < detection_dist_sq)
     {
         if(FindPath(self.origin, current_box.origin, undefined, 0, 1))
         {
 			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving))
+			{
+				if(self hasgoal("boxBuy"))
+					self cancelgoal("boxBuy");
+				
 				return;
+			}
 			
             if(dist_sq > interaction_dist_sq)
             {
-                if(!self HasGoal("boxBuy") || !DistanceSquared(self GetGoal("boxBuy"), current_box.origin) < 30625)
+                if(!self HasGoal("boxBuy") || DistanceSquared(self GetGoal("boxBuy"), current_box.origin) > 30625)
                 {
-                    self AddGoal(current_box.origin, 175, 2, "boxBuy");
+                    self AddGoal(current_box.origin, 150, 2, "boxBuy");
                 }
 				
                 return;
@@ -660,9 +677,12 @@ bot_buy_box()
 			   flag("moving_chest_now") || 
 			  (isDefined(current_box.is_locked) && current_box.is_locked) || 
 			   self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-            {
-                return;
-            }
+			{
+				if(self hasgoal("boxBuy"))
+					self cancelgoal("boxBuy");
+				
+				return;
+			}
 			
             // Setup state
             level.box_in_use_by_bot = self;
@@ -696,16 +716,20 @@ bot_buy_box()
     }
 	
     if(self hasgoal("boxBuy"))
-    {
         self cancelgoal("boxBuy");
-    }
 }
 
 bot_monitor_box_animation(box)
 {
     self endon("disconnect");
     self endon("death");
+	
+	level endon("end_game");
+	
     self endon("box_usage_complete");
+	
+    // Thread the watcher on level so it survives bot death
+    level thread bot_box_cleanup_watcher(self, box);
     
     wait 5;
     
@@ -821,19 +845,22 @@ bot_monitor_box_animation(box)
                 break;
             }
         }
-		
-		self.bot.last_box_interaction_time = GetTime();
-		
-		if(level.round_number <= 15)
-			self.bot.box_cooldown_duration = randomintrange(180000, 300000);
-		else
-			self.bot.box_cooldown_duration = randomintrange(300000, 600000);
     }
     
     // Cleanup
+	self.bot.last_box_interaction_time = GetTime();
+	
+	if(level.round_number <= 8)
+		self.bot.box_cooldown_duration = randomintrange(90000, 180000);
+	else if(level.round_number <= 15)
+		self.bot.box_cooldown_duration = randomintrange(180000, 300000);
+	else
+		self.bot.box_cooldown_duration = randomintrange(480000, 600000);
+	
 	self clearlookat();
-    self.bot.current_box = undefined;
-    self.bot.is_using_box = undefined;
+	
+	self.bot.current_box = undefined;
+	self.bot.is_using_box = undefined;
     
     if(isDefined(box.chest_user) && box.chest_user == self)
         box.chest_user = undefined;
@@ -842,6 +869,29 @@ bot_monitor_box_animation(box)
         level.box_in_use_by_bot = undefined;
         
     self notify("box_usage_complete");
+}
+
+bot_box_cleanup_watcher(zbot, box)
+{
+	zbot endon("disconnect");
+	
+	level endon("end_game");
+	
+    // If the box interaction completes normally, we don't need to do anything
+    zbot endon("box_usage_complete");
+	
+	// Only reached if the bot died mid-animation
+    zbot waittill("death");
+	
+	zbot.bot.waiting_for_box_animation = undefined;
+	zbot.bot.current_box = undefined;
+    zbot.bot.is_using_box = undefined;
+	
+    if(isDefined(box) && isDefined(box.chest_user) && box.chest_user == zbot)
+        box.chest_user = undefined;
+	
+    if(isDefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zbot)
+        level.box_in_use_by_bot = undefined;
 }
 
 bot_should_take_weapon(boxWeapon, currentWeapon)
@@ -889,7 +939,7 @@ bot_get_weapon_score(weapon)
 		return 0;
     
 	// Weapons that it shouldn't be take it from the box
-	if (IsSubStr(weapon, "storm") || 
+	if(IsSubStr(weapon, "storm") || 
 		IsSubStr(weapon, "knife_ballistic") || 
 		IsSubStr(weapon, "willy_pete") || 
 		IsSubStr(weapon, "time_bomb") || 
@@ -899,7 +949,7 @@ bot_get_weapon_score(weapon)
 		return 0;
 	
     // Wonder Weapons
-    if (IsSubStr(weapon, "ray_gun") || 
+    if(IsSubStr(weapon, "ray_gun") || 
 		IsSubStr(weapon, "mark2") || 
 		IsSubStr(weapon, "freezegun") || 
 		IsSubStr(weapon, "tesla") || 
@@ -912,7 +962,7 @@ bot_get_weapon_score(weapon)
 		return 100;
 		
     // Special Weapons
-	if (IsSubStr(weapon, "minigun") || 
+	if(IsSubStr(weapon, "minigun") || 
 		IsSubStr(weapon, "titus"))
 		
 		return 99;
@@ -931,8 +981,9 @@ bot_get_weapon_score(weapon)
 
 bot_buy_wallbuy()
 {
-	self endon("death");
 	self endon("disconnect");
+	self endon("death");
+	
 	level endon("end_game");
 	
     if(level.round_number <= 2)
@@ -993,8 +1044,9 @@ bot_buy_wallbuy()
 
 bot_navigate_and_buy_wallbuy(weaponToBuy)
 {
-	self endon("death");
 	self endon("disconnect");
+	self endon("death");
+	
 	level endon("end_game");
 	
 	self.bot.wallbuy_nav_expiry = GetTime() + 3000;
@@ -1144,7 +1196,7 @@ bot_should_pack()
 
 bot_buy_perks()
 {
-    if (!isDefined(self.bot.perk_purchase_time) || GetTime() > self.bot.perk_purchase_time)
+    if(!isDefined(self.bot.perk_purchase_time) || GetTime() > self.bot.perk_purchase_time)
     {
         // Only attempt to buy perks every 30 seconds
         self.bot.perk_purchase_time = GetTime() + 30000;
@@ -1156,17 +1208,17 @@ bot_buy_perks()
 		{
 			if(level.perk_purchase_limit <= 5)
 			{
-				if (getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
+				if(getDvar("mapname") == "zm_transit" || getDvar("mapname") == "zm_highrise" || getDvar("mapname") == "zm_buried")
 				{
 					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_flakjacket");
 					costs = array(1500, 3000, 2000, 2000);
 				}
-				else if (getDvar("mapname") == "zm_prison")
+				else if(getDvar("mapname") == "zm_prison")
 				{
 					perks = array("specialty_fastreload", "specialty_rof", "specialty_grenadepulldeath", "specialty_flakjacket");
 					costs = array(3000, 2000, 2000, 2000);
 				}
-				else if (getDvar("mapname") == "zm_tomb")
+				else if(getDvar("mapname") == "zm_tomb")
 				{
 					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_longersprint", "specialty_movefaster");
 					costs = array(1500, 3000, 2000, 2500);
@@ -1498,20 +1550,22 @@ bot_revive_teammates()
 
 bot_simulate_revive(teammate)
 {
-    self endon("death");
     self endon("disconnect");
+	self endon("death");
+	
+	level endon("end_game");
     
-    teammate endon("death");
     teammate endon("disconnect");
+	teammate endon("death");
     
     // 1. SAVE the current weapon so we can give it back later
     current_weapon = self getCurrentWeapon();
     
-    if (current_weapon == "none" || current_weapon == "revive_weapon_zm")
+    if(current_weapon == "none" || current_weapon == "revive_weapon_zm")
     {
         weapons = self getweaponslistprimaries();
 		
-        if (isDefined(weapons) && weapons.size > 0)
+        if(isDefined(weapons) && weapons.size > 0)
             current_weapon = weapons[0];
     }
     
@@ -1565,7 +1619,7 @@ bot_simulate_revive(teammate)
     // 2. RESTORE the weapon
     wait 0.6;
     
-    if (isDefined(current_weapon) && current_weapon != "none")
+    if(isDefined(current_weapon) && current_weapon != "none")
         self switchtoweapon(current_weapon);
     
     // Clear flags on normal exit
@@ -1578,6 +1632,8 @@ bot_simulate_revive(teammate)
 // Clears being_revived immediately if the reviving bot dies mid-revive.
 bot_revive_cleanup_watcher(reviving_bot, teammate)
 {
+	level endon("end_game");
+	
     while(true)
     {
         wait 0.1;
@@ -1656,9 +1712,10 @@ get_closest_downed_teammate()
 
 bot_update_wander()
 {
-	self endon("death");
 	self endon("disconnect");
-	level endon("game_ended");
+	self endon("death");
+	
+	level endon("end_game");
 	
 	self.bot.is_survival = (getDvar("g_gametype") == "zstandard") || (isDefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
 	
@@ -1686,7 +1743,7 @@ bot_update_wander()
 		
 		if(dist_sq > 1440000)
 		{
-			if (self.bot.is_survival)
+			if(self.bot.is_survival)
 				self.bot.is_following = false;
 			else
 				self.bot.is_following = true;
@@ -1760,8 +1817,9 @@ get_random_walkable_location(origin, range, player)
 
 manual_bot_teleport_monitor()
 {
-    self endon("death");
     self endon("disconnect");
+	self endon("death");
+	
     level endon("end_game");
     
     self notifyOnPlayerCommand("teleport_pressed", "+actionslot 3");
@@ -1775,7 +1833,7 @@ manual_bot_teleport_monitor()
         current_time = GetTime(); // Get the current server time in milliseconds
         
         // If pressed again within 500 milliseconds (0.5 seconds), execute the teleport
-        if (current_time - last_press_time < 500)
+        if(current_time - last_press_time < 500)
         {
             self execute_bot_teleport();
             
@@ -1798,6 +1856,7 @@ execute_bot_teleport()
     if(self IsOnGround())
     {
         bots_to_teleport = [];
+		
         players = get_players();
         
         foreach(player in players)
@@ -1825,8 +1884,9 @@ execute_bot_teleport()
 
 bot_staggered_teleport(bots_to_teleport, offsets)
 {
+	self endon("disconnect");
     self endon("death");
-    self endon("disconnect");
+	
     level endon("end_game");
     
     teleported = 0;
@@ -1855,9 +1915,10 @@ bot_staggered_teleport(bots_to_teleport, offsets)
 
 bot_weapon_switch_think()
 {
-    self endon("death");
     self endon("disconnect");
-    level endon("game_ended");
+	self endon("death");
+	
+    level endon("end_game");
 
     wait randomfloatrange(3.0, 4.0);
 
@@ -1930,9 +1991,10 @@ bot_switch_weapon(current_weapon, primaries)
 
 bot_weapon_failsafe_monitor()
 {
-    self endon("death");
     self endon("disconnect");
-	level endon("game_ended");
+	self endon("death");
+	
+	level endon("end_game");
     
     for(;;)
     {
@@ -1959,7 +2021,7 @@ bot_weapon_failsafe_monitor()
         primaries = self GetWeaponsListPrimaries();
         
         // If they somehow have no current weapon, or their primary inventory is completely empty
-        if (weapon == "none" || !isDefined(primaries) || primaries.size == 0)
+        if(weapon == "none" || !isDefined(primaries) || primaries.size == 0)
         {
             wait 5;
 
@@ -1967,21 +2029,21 @@ bot_weapon_failsafe_monitor()
             weapon = self GetCurrentWeapon();
             primaries = self GetWeaponsListPrimaries();
 
-            if (weapon != "none" && isDefined(primaries) && primaries.size > 0)
+            if(weapon != "none" && isDefined(primaries) && primaries.size > 0)
                 continue; // Weapon transition completed fine, no fallback needed
 
             fallback_weapon = "galil_zm";
             
             // Check if the map is Origins
-            if (getDvar("mapname") == "zm_tomb")
+            if(getDvar("mapname") == "zm_tomb")
             {
                 fallback_weapon = "mp44_zm";
             }
             
-			if (weapon != "none")
+			if(weapon != "none")
 				self TakeWeapon(weapon);
 			
-			if (isDefined(primaries) && primaries.size > 0)
+			if(isDefined(primaries) && primaries.size > 0)
 			{
 				for (i = 0; i < primaries.size; i++)
 					self TakeWeapon(primaries[i]);
@@ -1996,14 +2058,10 @@ bot_weapon_failsafe_monitor()
 
 bot_stand_fix()
 {
-	self endon("death");
-	self endon("disconnect");
-	level endon("end_game");
-	
 	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		return;
 	
-	if (self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
+	if(self isonground() && (self getstance() == "crouch" || self getstance() == "prone"))
 	{
 		self botaction(BOT_ACTION_STAND);
 	}
@@ -2031,9 +2089,10 @@ fast_array_contains(array, value)
 
 bot_wakeup_think()
 {
-	self endon("death");
 	self endon("disconnect");
-	level endon("game_ended");
+	self endon("death");
+	
+	level endon("end_game");
 	
 	for(;;)
 	{
@@ -2046,10 +2105,13 @@ bot_wakeup_think()
 bot_damage_think()
 {
 	self notify("bot_damage_think");
+	
 	self endon("bot_damage_think");
 	
 	self endon("disconnect");
-	level endon("game_ended");
+	self endon("death");
+	
+	level endon("end_game");
 	
 	for(;;)
 	{
@@ -2063,8 +2125,9 @@ bot_damage_think()
 
 bot_reset_flee_goal()
 {
-	self endon("death");
 	self endon("disconnect");
+	self endon("death");
+	
 	level endon("end_game");
 	
 	while(1)
@@ -2080,7 +2143,7 @@ bot_get_closest_enemy(origin)
 	enemies = get_cached_zombies(); // Use cached array
 	enemies = arraysort(enemies, origin);
 	
-	if (enemies.size >= 1)
+	if(enemies.size >= 1)
 	{
 		return enemies[0];
 	}
@@ -2092,16 +2155,16 @@ bot_update_lookat()
 {
 	path = 0;
 	
-	if (isDefined(self getlookaheaddir()))
+	if(isDefined(self getlookaheaddir()))
 	{
 		path = 1;
 	}
 	
-	if (!path && getTime() > self.bot.update_idle_lookat)
+	if(!path && getTime() > self.bot.update_idle_lookat)
 	{
 		origin = bot_get_look_at();
 		
-		if (!isDefined(origin))
+		if(!isDefined(origin))
 		{
 			return;
 		}
@@ -2109,7 +2172,7 @@ bot_update_lookat()
 		self lookat(origin + vectorScale((0, 0, 1), 16));
 		self.bot.update_idle_lookat = getTime() + randomintrange(1500, 3000);
 	}
-	else if (path && self.bot.update_idle_lookat > 0)
+	else if(path && self.bot.update_idle_lookat > 0)
 	{
 		self clearlookat();
 		self.bot.update_idle_lookat = 0;
@@ -2120,11 +2183,11 @@ bot_get_look_at()
 {
 	enemy = bot_get_closest_enemy(self.origin);
 	
-	if (isDefined(enemy))
+	if(isDefined(enemy))
 	{
 		node = getvisiblenode(self.origin, enemy.origin);
 		
-		if (isDefined(node) && distancesquared(self.origin, node.origin) > 1024)
+		if(isDefined(node) && distancesquared(self.origin, node.origin) > 1024)
 		{
 			return node.origin;
 		}
@@ -2132,12 +2195,12 @@ bot_get_look_at()
 	
 	spawn = self getgoal("wander");
 	
-	if (isDefined(spawn))
+	if(isDefined(spawn))
 	{
 		node = getvisiblenode(self.origin, spawn);
 	}
 	
-	if (isDefined(node) && distancesquared(self.origin, node.origin) > 1024)
+	if(isDefined(node) && distancesquared(self.origin, node.origin) > 1024)
 	{
 		return node.origin;
 	}
@@ -2149,7 +2212,8 @@ bot_give_ammo()
 {
 	self endon("disconnect");
 	self endon("death");
-	level endon("game_ended");
+	
+	level endon("end_game");
 	
 	for(;;)
 	{
@@ -2174,7 +2238,7 @@ bot_update_weapon()
 	
 	foreach (primary in primaries)
 	{
-		if (primary != weapon)
+		if(primary != weapon)
 		{
 			self switchtoweapon(primary);
 			return;
@@ -2187,17 +2251,17 @@ bot_update_failsafe()
 {
 	time = getTime();
 	
-	if ((time - self.spawntime) < 7500)
+	if((time - self.spawntime) < 7500)
 	{
 		return;
 	}
 	
-	if (time < self.bot.update_failsafe)
+	if(time < self.bot.update_failsafe)
 	{
 		return;
 	}
 	
-	if (!self atgoal() && distance2dsquared(self.bot.previous_origin, self.origin) < 256)
+	if(!self atgoal() && distance2dsquared(self.bot.previous_origin, self.origin) < 256)
 	{
 		nodes = getnodesinradius(self.origin, 512, 0);
 		nodes = array_randomize(nodes);
@@ -2206,13 +2270,13 @@ bot_update_failsafe()
 		
 		failsafe = 0;
 		
-		if (isDefined(nearest))
+		if(isDefined(nearest))
 		{
 			i = 0;
 			
 			while (i < nodes.size)
 			{
-				if (!bot_failsafe_node_valid(nearest, nodes[i]))
+				if(!bot_failsafe_node_valid(nearest, nodes[i]))
 				{
 					i++;
 					continue;
@@ -2233,7 +2297,7 @@ bot_update_failsafe()
 				i++;
 			}
 		}
-		else if (!failsafe && nodes.size)
+		else if(!failsafe && nodes.size)
 		{
 			node = random(nodes);
 			self botsetfailsafenode(node);
@@ -2254,35 +2318,35 @@ bot_update_failsafe()
 
 bot_failsafe_node_valid(nearest, node)
 {
-	if (isDefined(node.script_noteworthy))
+	if(isDefined(node.script_noteworthy))
 	{
 		return 0;
 	}
 	
-	if ((node.origin[2] - self.origin[2]) > 18)
+	if((node.origin[2] - self.origin[2]) > 18)
 	{
 		return 0;
 	}
 	
-	if (nearest == node)
+	if(nearest == node)
 	{
 		return 0;
 	}
 	
-	if (!nodesvisible(nearest, node))
+	if(!nodesvisible(nearest, node))
 	{
 		return 0;
 	}
 	
-	if (isDefined(level.spawn_all) && level.spawn_all.size > 0)
+	if(isDefined(level.spawn_all) && level.spawn_all.size > 0)
 	{
 		spawns = arraysort(level.spawn_all, node.origin);
 	}
-	else if (isDefined(level.spawnpoints) && level.spawnpoints.size > 0)
+	else if(isDefined(level.spawnpoints) && level.spawnpoints.size > 0)
 	{
 		spawns = arraysort(level.spawnpoints, node.origin);
 	}
-	else if (isDefined(level.spawn_start) && level.spawn_start.size > 0)
+	else if(isDefined(level.spawn_start) && level.spawn_start.size > 0)
 	{
 		spawns = arraycombine(level.spawn_start["allies"], level.spawn_start["axis"], 1, 0);
 		spawns = arraysort(spawns, node.origin);
@@ -2294,7 +2358,7 @@ bot_failsafe_node_valid(nearest, node)
 	
 	goal = bot_nearest_node(spawns[0].origin);
 	
-	if (isDefined(goal) && findpath(node.origin, goal.origin, undefined, 0, 1))
+	if(isDefined(goal) && findpath(node.origin, goal.origin, undefined, 0, 1))
 	{
 		return 1;
 	}
@@ -2306,14 +2370,14 @@ bot_nearest_node(origin)
 {
 	node = getnearestnode(origin);
 	
-	if (isDefined(node))
+	if(isDefined(node))
 	{
 		return node;
 	}
 	
 	nodes = getnodesinradiussorted(origin, 256, 0, 256);
 	
-	if (nodes.size)
+	if(nodes.size)
 	{
 		return nodes[0];
 	}
