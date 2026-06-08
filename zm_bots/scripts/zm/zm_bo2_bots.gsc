@@ -135,14 +135,13 @@ init()
 	if(!isdefined(level.using_bot_revive_logic))
 		level.using_bot_revive_logic = 1;
 	
-    // Initialize box usage variables
+    if(!isDefined(level.mystery_box_teddy_locations))
+        level.mystery_box_teddy_locations = [];
+	
     level.box_in_use_by_bot = undefined;
 	
     if(!isDefined(level.door_being_opened))
         level.door_being_opened = false;
-	
-    if(!isDefined(level.mystery_box_teddy_locations))
-        level.mystery_box_teddy_locations = [];
 	
     // Initialize all caches
 	init_zombie_cache();
