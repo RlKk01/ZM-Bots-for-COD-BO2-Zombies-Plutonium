@@ -174,6 +174,7 @@ spawn_bot()
 	if(isDefined(bot))
 	{
 		bot.pers["isBot"] = 1;
+		
 		bot thread onspawn();
 	}
 	
@@ -600,6 +601,7 @@ bot_buy_box()
             self.bot.waiting_for_box_animation = undefined;
             self.bot.current_box = undefined;
             self.bot.is_using_box = undefined;
+			
             if(level.box_in_use_by_bot == self)
 			level.box_in_use_by_bot = undefined;
         }
@@ -617,6 +619,7 @@ bot_buy_box()
     if(level.bot_last_check_chest_index != level.chest_index)
     {
         level.mystery_box_teddy_locations = [];
+		
         level.bot_last_check_chest_index = level.chest_index;
     }
 	
@@ -740,8 +743,10 @@ bot_monitor_box_animation(box)
     {
         self.bot.current_box = undefined;
         self.bot.is_using_box = undefined;
+		
         if(level.box_in_use_by_bot == self)
 		level.box_in_use_by_bot = undefined;
+		
         self notify("box_usage_complete");
 		
         return;
@@ -758,8 +763,10 @@ bot_monitor_box_animation(box)
             
         self.bot.current_box = undefined;
         self.bot.is_using_box = undefined;
+		
         if(level.box_in_use_by_bot == self)
 		level.box_in_use_by_bot = undefined;
+		
         self notify("box_usage_complete");
 		
         return;
@@ -770,7 +777,9 @@ bot_monitor_box_animation(box)
     self cancelgoal("wander");
     
     box.chest_user = self;
+	
     self lookat(box.origin);
+	
     wait 0.2;
 
     // --- WEAPON EVALUATION ---
@@ -810,18 +819,19 @@ bot_monitor_box_animation(box)
     if(isDefined(worst_weapon) && self GetCurrentWeapon() != worst_weapon)
     {
         self SwitchToWeapon(worst_weapon);
+		
         wait 2; // Give it time to switch
     }
 
     // Check if the bot should actually take the weapon
     if(bot_should_take_weapon(box_weapon, worst_weapon))
     {
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			return;
+		
         // Retry grab multiple times for reliability
         for(attempt = 0; attempt < 3; attempt++)
         {
-			if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-				continue;
-			
             if(is_true(box._box_open))
             {
                 if(isDefined(box.unitrigger_stub) && isDefined(box.unitrigger_stub.trigger))
@@ -847,7 +857,7 @@ bot_monitor_box_animation(box)
         }
     }
     
-    // Cleanup
+    // Cooldown condition usage for bot to not use the mystery box repeatedly
 	self.bot.last_box_interaction_time = GetTime();
 	
 	if(level.round_number <= 8)
@@ -857,6 +867,7 @@ bot_monitor_box_animation(box)
 	else
 		self.bot.box_cooldown_duration = randomintrange(480000, 600000);
 	
+	// Cleanup
 	self clearlookat();
 	
 	self.bot.current_box = undefined;
@@ -986,10 +997,7 @@ bot_buy_wallbuy()
 	
 	level endon("end_game");
 	
-    if(level.round_number <= 2)
-		return;
-	
-	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+    if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 	{
 		self CancelGoal("weaponBuy");
 		return;
