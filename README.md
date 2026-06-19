@@ -8,17 +8,23 @@ To install this mod, press «Win + R» and paste the following path: «%localapp
 
 After that, paste the folder "zm_bots" right there.
 
-The most relevant characteristics that this bots have are:
-* They buy Perks, Wall Guns and upgrade their weapons on a determined radius.
-
-* A pickup «Power Up» function with a smart check to avoid to pick up nukes (but they may bump on accident to the powerup on specific conditions).
-
-* Smart use of the «Mystery Box» with a weapon tier list, which they will have a preference on what gun they should take from the box.
-
-* Bots revive other players, just as a real player would.
-
-* They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
+The most relevant characteristics that these bots have are:
 
 * They will purchase doors or clear debris within a small radius range.
 
-* They will wander around the maps, but without going to far from the host.
+* They will buy wall-guns on a determined radius.
+
+* They will buy perks and upgrade their weapons without needing to be close to the machines.
+  (Note: These two features are currently a work in progress and will be improved.)
+
+* They smartly use the Mystery Box, following a weapon tier list to prioritize which guns they take.
+
+* A pickup «Power Up» function with a smart check to avoid to pick up nukes (but they may bump on accident to the powerup on specific conditions).
+
+* Bots will revive other players, just as a real player would.
+
+* They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
+
+* They will wander around the maps, but without going to far from the host, in case it's not the survival gamemode.
+
+* Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
