@@ -527,11 +527,16 @@ bot_pickup_powerup()
 			continue;
 		}
 		
-		// Make the bot avoid picking up the nuke powerup
+		// Avoid the nuke powerup unless there are no zombies left this round
 		if(isdefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
 		{
-			self cancelgoal("powerup");
-			continue;
+			zombies_left = level.zombie_total > 0 || get_current_zombie_count() > 0;
+			
+			if(zombies_left)
+			{
+				self cancelgoal("powerup");
+				continue;
+			}
 		}
 		
 		if(getdvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
@@ -1376,18 +1381,17 @@ bot_buy_door()
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 			continue;
 		
-		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
-			continue;
-		
-		if(self hasgoal("boxbuy") || self hasgoal("weaponbuy"))
-			continue;
-		
         // Skip if door is already opened
         if(isdefined(door._door_open) && door._door_open)
             continue;
         
         if(isdefined(door.has_been_opened) && door.has_been_opened)
             continue;
+		
+		// Skip doors with no real point cost — these aren't standard purchasable doors
+		// (e.g. Afterlife-only shock-panel doors sharing the "zombie_door" targetname for pathing)
+		if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0)
+			continue;
 		
         // Skip doors we can't afford
         if(self.score < door.zombie_cost)
@@ -1461,12 +1465,6 @@ bot_clear_debris()
     foreach(pile in debris)
     {
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			continue;
-		
-		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
-			continue;
-		
-		if(self hasgoal("boxbuy") || self hasgoal("weaponbuy"))
 			continue;
 		
         // Skip if pile is not defined
@@ -1637,19 +1635,24 @@ bot_revive_teammates()
             return;
         }
 		
-        // If another bot is actively reviving, back off and clear flags
-        if(isdefined(self.bot.revive_target) && is_true(self.bot.revive_target.being_revived) && !is_true(self.bot.is_reviving))
-        {
-            if(isdefined(self.bot.revive_target.revive_claimer_count) && self.bot.revive_target.revive_claimer_count > 0)
-                self.bot.revive_target.revive_claimer_count--;
-            
-            self.bot.revive_target = undefined;
-            
-            self cancelgoal("revive");
-            
-            return;
-        }
-	
+		// If another bot OR a real player is actively reviving, back off and clear flags
+		if(isdefined(self.bot.revive_target) && !is_true(self.bot.is_reviving))
+		{
+			real_player_reviving = isdefined(self.bot.revive_target.revivetrigger) && is_true(self.bot.revive_target.revivetrigger.beingrevived);
+			
+			if(is_true(self.bot.revive_target.being_revived) || real_player_reviving)
+			{
+				if(isdefined(self.bot.revive_target.revive_claimer_count) && self.bot.revive_target.revive_claimer_count > 0)
+					self.bot.revive_target.revive_claimer_count--;
+				
+				self.bot.revive_target = undefined;
+				
+				self cancelgoal("revive");
+				
+				return;
+			}
+		}
+		
         if(self atgoal("revive") || distancesquared(self.origin, self getgoal("revive")) < 5625)
         {
             teammate = self.bot.revive_target;
@@ -1805,9 +1808,9 @@ get_closest_downed_teammate()
     {
         if(player maps\mp\zombies\_zm_laststand::player_is_in_laststand())
         {
-            // Do not target a player who is already being actively revived by someone else
-            if(is_true(player.being_revived) && self.bot.revive_target != player)
-                continue;
+			// Do not target a player who is already being actively revived by someone else (bot or real player)
+			if((is_true(player.being_revived) || (isdefined(player.revivetrigger) && is_true(player.revivetrigger.beingrevived))) && self.bot.revive_target != player)
+				continue;
 			
             // Allow up to 2 bots to assist the same downed player,
             // or always include a player this bot has already claimed.
@@ -1907,7 +1910,7 @@ bot_update_wander()
 			
 			if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(self.origin, 1024, self);
+				location = get_random_walkable_location(self.origin, 800, self);
 
 				if(isdefined(location))
 				{
@@ -1926,20 +1929,86 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
-	nodes = getnodesinradiussorted(origin, range, 64, 1024);
+	nodes = getnodesinradiussorted(origin, range, 64, 256);
 	
 	if(isdefined(nodes) && nodes.size > 0)
 	{
 		nodes = array_randomize(nodes);
 		
+		valid_nodes = [];
+		
 		foreach(node in nodes)
 		{
 			if(check_point_in_playable_area(node.origin))
+				valid_nodes[valid_nodes.size] = node;
+		}
+		
+		foreach(node in valid_nodes)
+		{
+			if(!bot_node_on_cooldown(player, node))
+			{
+				bot_add_wander_node_history(player, node);
+				
 				return node.origin;
+			}
+		}
+		
+		// all nearby valid nodes are on cooldown, fall back rather than getting stuck
+		if(valid_nodes.size > 0)
+		{
+			node = valid_nodes[0];
+			
+			bot_add_wander_node_history(player, node);
+			
+			return node.origin;
 		}
 	}
 	
 	return origin;
+}
+
+bot_node_on_cooldown(player, node)
+{
+	if(!isdefined(player.bot.wander_node_history))
+		return false;
+	
+	for(i = 0; i < player.bot.wander_node_history.size; i++)
+	{
+		entry = player.bot.wander_node_history[i];
+		
+		if(entry.node == node)
+			return (gettime() - entry.time) < 15000; // 15 sec cooldown, tweak as needed
+	}
+	
+	return false;
+}
+
+bot_add_wander_node_history(player, node)
+{
+	if(!isdefined(player.bot.wander_node_history))
+		player.bot.wander_node_history = [];
+	
+	entry = spawnstruct();
+	
+	entry.node = node;
+	
+	entry.time = gettime();
+	
+	player.bot.wander_node_history[player.bot.wander_node_history.size] = entry;
+	
+	max_history = 5; // how many recent nodes to remember, tweak as needed
+	
+	if(player.bot.wander_node_history.size > max_history)
+	{
+		trimmed = [];
+		
+		start = player.bot.wander_node_history.size - max_history;
+		
+		for(i = start; i < player.bot.wander_node_history.size; i++)
+			trimmed[trimmed.size] = player.bot.wander_node_history[i];
+		
+		player.bot.wander_node_history = trimmed;
+	}
 }
 
 manual_bot_teleport_monitor()
