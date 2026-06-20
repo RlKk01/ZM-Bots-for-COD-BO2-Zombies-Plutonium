@@ -270,7 +270,7 @@ init_zombie_cache()
 	{
 		level.zombie_cache = [];
 		level.zombie_cache_time = 0;
-		level.zombie_cache_refresh = 1000; // refresh every 1 second
+		level.zombie_cache_refresh = 1000; // Refresh every 1 second
 	}
 }
 
@@ -298,7 +298,7 @@ init_vending_cache()
     {
         level.vending_cache = getentarray("zombie_vending", "targetname");
         level.vending_cache_time = 0;
-        level.vending_cache_refresh = 5000; // refresh every 5 seconds
+        level.vending_cache_refresh = 5000; // Refresh every 5 seconds
     }
 }
 
@@ -325,7 +325,7 @@ init_door_cache()
     {
         level.door_cache = getentarray("zombie_door", "targetname");
         level.door_cache_time = 0;
-        level.door_cache_refresh = 10000; // refresh every 10 seconds
+        level.door_cache_refresh = 10000; // Refresh every 10 seconds
     }
 }
 
@@ -351,7 +351,7 @@ init_debris_cache()
     {
         level.debris_cache = getentarray("zombie_debris", "targetname");
         level.debris_cache_time = 0;
-        level.debris_cache_refresh = 10000; // refresh every 10 seconds
+        level.debris_cache_refresh = 10000; // Refresh every 10 seconds
     }
 }
 
@@ -650,8 +650,10 @@ bot_buy_box()
     }
 	
     dist_sq = distancesquared(self.origin, current_box.origin);
-    interaction_dist_sq = 30625;
+    
 	detection_dist_sq = 1000000;
+	
+	interaction_dist_sq = 30625;
 	
     if(self.score >= 950 && dist_sq < detection_dist_sq)
     {
@@ -680,7 +682,9 @@ bot_buy_box()
 				self cancelgoal("boxbuy");
             
             aim_offset = (randomfloatrange(-5,5), randomfloatrange(-5,5), randomfloatrange(-5,5));
+			
             self lookat(current_box.origin + aim_offset);
+			
             wait randomfloatrange(0.3, 0.8);
 			
             if(self.score < 950 || is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
@@ -829,7 +833,7 @@ bot_monitor_box_animation(box)
     {
         self switchtoweapon(worst_weapon);
 		
-        wait 2; // give it time to switch
+        wait 2; // Give it time to switch
     }
 
     // Check if the bot should actually take the weapon
@@ -929,7 +933,7 @@ bot_should_take_weapon(boxweapon, currentweapon)
         return false;
     }
 
-    // Failsafe: If we can't read the box weapon, only blindly take it 
+    // Failsafe: If we can't read the box weapon, only blindly take it or, 
     // if our current weapon is bad/mid-tier (score less than 90).
     if(!isdefined(boxweapon))
     {
@@ -1058,13 +1062,13 @@ bot_get_weapon_score(weapon)
 	
     switch(weaponclass(weapon))
     {
-		default:                return 90;  // unknown / fallback
-        case "mg":              return 85;  // lmgs
-		case "spread":          return 80;  // shotguns
-        case "rifle":           return 75;  // assault rifles or snipers
-        case "smg":             return 70;  // smgs
-		case "rocketlauncher":  return 60;  // launchers
-		case "pistol":          return 50;  // handguns
+        case "mg":              return 95;  // LMGs
+		default:                return 90;  // Unknown / Fallback
+		case "spread":          return 80;  // Shotguns
+        case "rifle":           return 75;  // AR or Snipers
+        case "smg":             return 70;  // SMGs
+		case "rocketlauncher":  return 60;  // Launchers
+		case "pistol":          return 50;  // Handguns
     }
 }
 
@@ -1234,7 +1238,7 @@ bot_pack_gun()
 		if(!self bot_should_pack())
 			return;
 		
-		machines = get_cached_vending_machines(); // use cached array
+		machines = get_cached_vending_machines(); // Use cached array
 		
 		foreach(pack in machines)
 		{
@@ -1328,7 +1332,7 @@ bot_buy_perks()
 				costs = array(1500, 3000, 2000, 2000, 2500, 3000, 1500, 4000, 2000, 2000);
 			}
 			
-			machines = get_cached_vending_machines(); // use cached array
+			machines = get_cached_vending_machines(); // Use cached array
 			
 			nearby_machines = [];
 			
@@ -1370,11 +1374,11 @@ bot_buy_perks()
 bot_buy_door()
 {
 	// Get all potential doors
-    doors = get_cached_doors(); // use cached doors
+    doors = get_cached_doors(); // Use cached doors
     
     // Find the closest valid door
     closestdoor = undefined;
-    closestdistsq = 90000; // reduced max distance for realism
+    closestdistsq = 90000; // Reduced max distance for realism
 	
     foreach(door in doors)
     {
@@ -1428,7 +1432,7 @@ bot_buy_door()
         {
             closestdoor thread door_buy();
         }
-        else // otherwise fallback to direct door_opened call
+        else // Otherwise fallback to direct door_opened call
         {
             closestdoor thread maps\mp\zombies\_zm_blockers::door_opened(closestdoor.zombie_cost);
         }
@@ -1453,14 +1457,14 @@ bot_clear_debris()
 		return;
 	
 	// Get all potential debris piles
-    debris = get_cached_debris(); // use cached debris
+    debris = get_cached_debris(); // Use cached debris
     
     if(debris.size == 0)
         return false;
     
     // Find the closest valid debris pile
     closestdebris = undefined;
-    closestdistsq = 160000; // reduced max distance for realism
+    closestdistsq = 160000; // Reduced max distance for realism
     
     foreach(pile in debris)
     {
@@ -1481,6 +1485,10 @@ bot_clear_debris()
         
         if(isdefined(pile.has_been_opened) && pile.has_been_opened)
             continue;
+		
+		// Skip debris with no real point cost — these aren't standard clearable debris
+		if(!isdefined(pile.zombie_cost) || pile.zombie_cost <= 0)
+			continue;
         
         // Skip if we can't afford it
         if(self.score < pile.zombie_cost)
@@ -1610,7 +1618,7 @@ bot_revive_teammates()
         if(!isdefined(teammate))
             return;
 		
-        // CLAIM a slot for this bot (up to 2 bots can assist the same player)
+        // Claim a slot for this bot (up to 2 bots can assist the same player)
         if(!isdefined(teammate.revive_claimer_count))
             teammate.revive_claimer_count = 0;
 		
@@ -1635,7 +1643,7 @@ bot_revive_teammates()
             return;
         }
 		
-		// If another bot OR a real player is actively reviving, back off and clear flags
+		// If another bot or a real player is actively reviving, back off and clear flags
 		if(isdefined(self.bot.revive_target) && !is_true(self.bot.is_reviving))
 		{
 			real_player_reviving = isdefined(self.bot.revive_target.revivetrigger) && is_true(self.bot.revive_target.revivetrigger.beingrevived);
@@ -1679,7 +1687,7 @@ bot_simulate_revive(teammate)
     teammate endon("disconnect");
 	teammate endon("death");
     
-    // 1. SAVE the current weapon so we can give it back later
+    // 1. Save the current weapon so we can give it back later
     current_weapon = self getcurrentweapon();
     
     if(current_weapon == "none" || current_weapon == "revive_weapon_zm")
@@ -1733,7 +1741,7 @@ bot_simulate_revive(teammate)
         wait 0.05;
     }
     
-    // 2. RESTORE the weapon
+    // 2. Restore the weapon
     wait 0.6;
     
     if(isdefined(current_weapon) && current_weapon != "none")
@@ -1910,7 +1918,7 @@ bot_update_wander()
 			
 			if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(self.origin, 800, self);
+				location = get_random_walkable_location(self.origin, 1800, self);
 
 				if(isdefined(location))
 				{
@@ -1931,84 +1939,18 @@ get_random_walkable_location(origin, range, player)
 {
 	nodes = getnodesinradiussorted(origin, range, 64, 256);
 	
-	if(isdefined(nodes) && nodes.size > 0)
+	if(isDefined(nodes) && nodes.size > 0)
 	{
 		nodes = array_randomize(nodes);
-		
-		valid_nodes = [];
 		
 		foreach(node in nodes)
 		{
 			if(check_point_in_playable_area(node.origin))
-				valid_nodes[valid_nodes.size] = node;
-		}
-		
-		foreach(node in valid_nodes)
-		{
-			if(!bot_node_on_cooldown(player, node))
-			{
-				bot_add_wander_node_history(player, node);
-				
 				return node.origin;
-			}
-		}
-		
-		// all nearby valid nodes are on cooldown, fall back rather than getting stuck
-		if(valid_nodes.size > 0)
-		{
-			node = valid_nodes[0];
-			
-			bot_add_wander_node_history(player, node);
-			
-			return node.origin;
 		}
 	}
 	
 	return origin;
-}
-
-bot_node_on_cooldown(player, node)
-{
-	if(!isdefined(player.bot.wander_node_history))
-		return false;
-	
-	for(i = 0; i < player.bot.wander_node_history.size; i++)
-	{
-		entry = player.bot.wander_node_history[i];
-		
-		if(entry.node == node)
-			return (gettime() - entry.time) < 15000; // 15 sec cooldown, tweak as needed
-	}
-	
-	return false;
-}
-
-bot_add_wander_node_history(player, node)
-{
-	if(!isdefined(player.bot.wander_node_history))
-		player.bot.wander_node_history = [];
-	
-	entry = spawnstruct();
-	
-	entry.node = node;
-	
-	entry.time = gettime();
-	
-	player.bot.wander_node_history[player.bot.wander_node_history.size] = entry;
-	
-	max_history = 5; // how many recent nodes to remember, tweak as needed
-	
-	if(player.bot.wander_node_history.size > max_history)
-	{
-		trimmed = [];
-		
-		start = player.bot.wander_node_history.size - max_history;
-		
-		for(i = start; i < player.bot.wander_node_history.size; i++)
-			trimmed[trimmed.size] = player.bot.wander_node_history[i];
-		
-		player.bot.wander_node_history = trimmed;
-	}
 }
 
 manual_bot_teleport_monitor()
@@ -2026,7 +1968,7 @@ manual_bot_teleport_monitor()
     {
         self waittill("teleport_pressed");
         
-        current_time = gettime(); // get the current server time in milliseconds
+        current_time = gettime(); // Get the current server time in milliseconds
         
         // If pressed again within 500 milliseconds (0.5 seconds), execute the teleport
         if(current_time - last_press_time < 500)
@@ -2227,7 +2169,7 @@ bot_weapon_failsafe_monitor()
             primaries = self getweaponslistprimaries();
 
             if(weapon != "none" && isdefined(primaries) && primaries.size > 0)
-                continue; // weapon transition completed fine, no fallback needed
+                continue; // Weapon transition completed fine, no fallback needed
 
             fallback_weapon = "galil_zm";
             
@@ -2336,7 +2278,7 @@ bot_reset_flee_goal()
 
 bot_get_closest_enemy(origin)
 {
-	enemies = get_cached_zombies(); // use cached array
+	enemies = get_cached_zombies(); // Use cached array
 	enemies = arraysort(enemies, origin);
 	
 	if(enemies.size >= 1)

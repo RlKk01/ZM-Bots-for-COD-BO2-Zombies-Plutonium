@@ -495,7 +495,7 @@ bot_can_reload()
 
 bot_best_enemy()
 {
-	enemies = get_cached_zombies(); // use cached array
+	enemies = get_cached_zombies(); // Use cached array
 	enemies = arraysort(enemies, self.origin);
 	
 	i = 0;
