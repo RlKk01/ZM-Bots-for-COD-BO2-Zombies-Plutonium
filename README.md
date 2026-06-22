@@ -27,6 +27,6 @@ The most relevant characteristics that these bots have are:
 
 * They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
 
-* They will wander around the maps, but without going to far from the host, in case it's not the survival gamemode.
+* They will wander around the maps, but without going to far from the host; but, in case it's the survival gamemode, this rule does not apply.
 
 * Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
