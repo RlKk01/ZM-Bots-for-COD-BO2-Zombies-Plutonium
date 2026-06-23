@@ -188,7 +188,7 @@ bot_should_melee()
 	
     knife_damage = getdvarintdefault("bot_knife_kill_threshold", 150);
 	
-    if(!level.zombie_vars[self.team]["zombie_powerup_insta_kill_on"] && threat.health > knife_damage)
+    if(!level.zombie_vars[self.team]["zombie_powerup_insta_kill_on"] && !self bot_has_ballistic_knife() && threat.health > knife_damage)
         return false;
 	
     melee_range = getdvarfloatdefault("bot_meleedist", 70);
@@ -439,6 +439,16 @@ bot_on_target(aim_target, radius)
 	return 0;
 }
 
+bot_has_ballistic_knife()
+{
+    weapon = self getcurrentweapon();
+
+    if(issubstr(weapon, "ballistic"))
+        return true;
+
+    return false;
+}
+
 bot_has_lmg()
 {
 	if(bot_has_weapon_class("mg"))
@@ -495,34 +505,36 @@ bot_can_reload()
 
 bot_best_enemy()
 {
-	enemies = get_cached_zombies(); // Use cached array
-	enemies = arraysort(enemies, self.origin);
-	
-	i = 0;
-	
-	while(i < enemies.size)
-	{
-		if(threat_should_ignore(enemies[i]))
-		{
-			i++;
-			continue;
-		}
-		
-		if(self botsighttracepassed(enemies[i]))
-		{
-			self.bot.threat.entity = enemies[i];
-			self.bot.threat.time_first_sight = gettime();
-			self.bot.threat.time_recent_sight = gettime();
-			self.bot.threat.dot = bot_dot_product(enemies[i].origin);
-			self.bot.threat.position = enemies[i].origin;
-			
-			return 1;
-		}
-		
-		i++;
-	}
-	
-	return 0;
+    enemies = get_cached_zombies(); // Use cached array
+    enemies = arraysort(enemies, self.origin);
+    
+    i = 0;
+    
+    while(i < enemies.size)
+    {
+        if(threat_should_ignore(enemies[i]))
+        {
+            i++;
+            continue;
+        }
+        
+        wallshoot_range = getdvarfloatdefault("bot_wallshoot_dist", 200);
+        
+        if(self botsighttracepassed(enemies[i]) || distance(self.origin, enemies[i].origin) <= wallshoot_range)
+        {
+            self.bot.threat.entity = enemies[i];
+            self.bot.threat.time_first_sight = gettime();
+            self.bot.threat.time_recent_sight = gettime();
+            self.bot.threat.dot = bot_dot_product(enemies[i].origin);
+            self.bot.threat.position = enemies[i].origin;
+            
+            return 1;
+        }
+        
+        i++;
+    }
+    
+    return 0;
 }
 
 bot_weapon_ammo_frac()

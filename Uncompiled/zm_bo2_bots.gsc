@@ -2,10 +2,11 @@
 #include maps\mp\_utility;
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\zombies\_zm_score;
-#include maps\mp\zombies\_zm_equipment;
+#include maps\mp\zombies\_zm_perks;
 #include maps\mp\zombies\_zm_weapons;
-#include maps\mp\zombies\_zm_blockers;
+#include maps\mp\zombies\_zm_equipment;
 #include maps\mp\zombies\_zm_powerups;
+#include maps\mp\zombies\_zm_blockers;
 #include maps\mp\zombies\_zm_laststand;
 #include maps\mp\zombies\_zm_afterlife;
 
@@ -497,6 +498,7 @@ bot_main()
 		if(is_true(level.using_bot_revive_logic))
 		{
 			self bot_revive_teammates();
+			self bot_self_revive_afterlife();
 		}
 		
 		self bot_pickup_powerup();
@@ -687,10 +689,10 @@ bot_buy_box()
 			
             wait randomfloatrange(0.3, 0.8);
 			
-            if(self.score < 950 || is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
+            if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950 || 
+			   is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
 			   flag("moving_chest_now") || 
-			  (isdefined(current_box.is_locked) && current_box.is_locked) || 
-			   self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+			  (isdefined(current_box.is_locked) && current_box.is_locked))
 			{
 				if(self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
@@ -973,7 +975,7 @@ bot_get_weapon_score(weapon)
 		return 0;
     
 	// Weapons that it shouldn't be take it from the box
-	if(issubstr(weapon, "ballistic") || 
+	if(issubstr(weapon, "metalstorm") || 
 	   issubstr(weapon, "willy_pete") || 
 	   issubstr(weapon, "time_bomb") || 
 	   issubstr(weapon, "emp_grenade") || 
@@ -1050,13 +1052,15 @@ bot_get_weapon_score(weapon)
 	   return 75;
 	
 	// Bad Weapons
-	if(issubstr(weapon, "m14") || 
+	if(issubstr(weapon, "ballistic") || 
+	   issubstr(weapon, "m14") || 
 	   issubstr(weapon, "fal") || 
 	   issubstr(weapon, "rottweil72") || 
 	   issubstr(weapon, "barretm82") || 
 	   issubstr(weapon, "saritch") || 
 	   issubstr(weapon, "ballista") || 
-	   issubstr(weapon, "dsr50"))
+	   issubstr(weapon, "dsr50") || 
+	   issubstr(weapon, "m32"))
 	   
 	   return 50;
 	
@@ -1155,6 +1159,12 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 	{
 		wait 1;
 		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			self cancelgoal("weaponbuy");
+			return;
+		}
+		
 		if(gettime() > maxtime)
 		{
 			self cancelgoal("weaponbuy");
@@ -1162,12 +1172,6 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 		}
 		
         if(!self isonground())
-		{
-			self cancelgoal("weaponbuy");
-			return;
-		}
-		
-		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
 			self cancelgoal("weaponbuy");
 			return;
@@ -1375,6 +1379,9 @@ bot_buy_door()
 {
 	// Get all potential doors
     doors = get_cached_doors(); // Use cached doors
+	
+    if(doors.size == 0)
+        return false;
     
     // Find the closest valid door
     closestdoor = undefined;
@@ -1384,6 +1391,14 @@ bot_buy_door()
     {
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 			continue;
+		
+        // Skip if door is not defined
+        if(!isdefined(door))
+            continue;
+		
+        // Skip if origin is not defined
+        if(!isdefined(door.origin))
+            continue;
 		
         // Skip if door is already opened
         if(isdefined(door._door_open) && door._door_open)
@@ -1400,16 +1415,6 @@ bot_buy_door()
         // Skip doors we can't afford
         if(self.score < door.zombie_cost)
             continue;
-		
-        // Handle electric doors
-        if(isdefined(door.script_noteworthy))
-        {
-            if(door.script_noteworthy == "electric_door" || door.script_noteworthy == "local_electric_door")
-            {
-                if(!flag("power_on"))
-                    continue;
-            }
-        }
 		
         // Check distance
         dist_sq = distancesquared(self.origin, door.origin);
@@ -1839,6 +1844,80 @@ get_closest_downed_teammate()
     return downed_players[0];
 }
 
+bot_self_revive_afterlife()
+{
+    if(!is_true(self.afterlife) || !isdefined(self.e_afterlife_corpse))
+    {
+        if(self hasgoal("selfrevive"))
+            self cancelgoal("selfrevive");
+
+        self.bot.is_selfreviving = false;
+
+        return;
+    }
+
+    if(is_true(self.bot.is_selfreviving))
+        return;
+
+    corpse = self.e_afterlife_corpse;
+
+    if(!self hasgoal("selfrevive"))
+    {
+        self addgoal(corpse.origin, 50, 3, "selfrevive");
+		
+        return;
+    }
+
+    if(self atgoal("selfrevive") || distancesquared(self.origin, self getgoal("selfrevive")) < 5625)
+    {
+        self thread bot_simulate_self_revive(corpse);
+    }
+}
+
+bot_simulate_self_revive(corpse)
+{
+    self endon("disconnect");
+    self endon("death");
+
+    level endon("end_game");
+
+    self.bot.is_selfreviving = true;
+
+    self cancelgoal("selfrevive");
+
+    if(self hasgoal("wander"))
+        self cancelgoal("wander");
+
+    if(self hasgoal("flee"))
+        self cancelgoal("flee");
+
+    self lookat(corpse.origin);
+
+    while(is_true(self.afterlife) && isdefined(self.e_afterlife_corpse) && self.e_afterlife_corpse == corpse)
+    {
+        self bot_clear_enemy();
+
+        if(self hasgoal("flee"))
+            self cancelgoal("flee");
+
+        if(self hasgoal("wander"))
+            self cancelgoal("wander");
+
+        if(distancesquared(self.origin, corpse.origin) > 10000)
+            break;
+
+        self lookat(corpse.origin);
+
+        self pressusebutton(2);
+
+        wait 0.05;
+    }
+	
+	// Clear flags
+    self.bot.is_selfreviving = false;
+    self clearlookat();
+}
+
 bot_update_wander()
 {
 	self endon("disconnect");
@@ -1889,6 +1968,12 @@ bot_update_wander()
 
 		if(self.bot.is_following)
 		{
+			if(!findpath(self.origin, player.origin, undefined, 0, 1))
+			{
+				self cancelgoal("wander");
+				continue;
+			}
+			
 			self addgoal(player.origin, 100, 1, "wander");
 			
 			if(dist_sq < 22500)
@@ -1918,7 +2003,10 @@ bot_update_wander()
 			
 			if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 			{
-				location = get_random_walkable_location(self.origin, 1800, self);
+				if(self.bot.is_survival)
+					location = get_random_walkable_location(self.origin, 1800, self);
+				else
+					location = get_random_walkable_location(self.origin, 800, self);
 
 				if(isdefined(location))
 				{
@@ -1937,16 +2025,54 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
-	nodes = getnodesinradiussorted(origin, range, 64, 256);
+	self.bot.is_survival = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
 	
-	if(isDefined(nodes) && nodes.size > 0)
+	if(self.bot.is_survival)
 	{
-		nodes = array_randomize(nodes);
+		tries = 0;
 		
-		foreach(node in nodes)
+		min_dist_sq = (range * 0.4) * (range * 0.4); // require at least 40% of "range" away — tweak the 0.4 as needed
+		
+		for(;;)
 		{
-			if(check_point_in_playable_area(node.origin))
-				return node.origin;
+			x = origin[0] + randomintrange(range * -1, range);
+			y = origin[1] + randomintrange(range * -1, range);
+			
+			trace_start = (x, y, origin[2] + 500);
+			trace_end = (x, y, origin[2] - 500);
+			
+			ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
+			
+			current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
+			
+			candidate = ground_trace["position"];
+			
+			if(distancesquared(origin, candidate) >= current_min_dist_sq && check_point_in_playable_area(candidate))
+				return candidate;
+			
+			if(tries >= 15)
+			{
+				return origin;
+			}
+			
+			tries ++;
+			
+			wait 0.05;
+		}
+	}
+	else
+	{
+		nodes = getnodesinradiussorted(origin, range, 64, 512);
+		
+		if(isDefined(nodes) && nodes.size > 0)
+		{
+			nodes = array_randomize(nodes);
+			
+			foreach(node in nodes)
+			{
+				if(check_point_in_playable_area(node.origin))
+					return node.origin;
+			}
 		}
 	}
 	
@@ -2065,11 +2191,14 @@ bot_weapon_switch_think()
     {
         wait randomfloatrange(3.0, 5.0);
 		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			wait 0.05;
+			continue;
+		}
+		
         if(!self isonground())
             continue;
-		
-		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			continue;
 
         if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
             continue;
@@ -2139,11 +2268,14 @@ bot_weapon_failsafe_monitor()
     {
         wait 1;
 		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			wait 0.05;
+			continue;
+		}
+		
         if(!self isonground())
             continue;
-		
-		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-			continue;
         
         // Skip checking if the bot is reviving or doing box stuff
         if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
@@ -2171,13 +2303,7 @@ bot_weapon_failsafe_monitor()
             if(weapon != "none" && isdefined(primaries) && primaries.size > 0)
                 continue; // Weapon transition completed fine, no fallback needed
 
-            fallback_weapon = "galil_zm";
-            
-            // Check if the map is Origins
-            if(getdvar("mapname") == "zm_tomb")
-            {
-                fallback_weapon = "mp44_zm";
-            }
+            fallback_weapon = "ray_gun_zm";
             
 			if(weapon != "none")
 				self takeweapon(weapon);
