@@ -841,10 +841,7 @@ bot_monitor_box_animation(box)
         // Retry grab multiple times for reliability
         for(attempt = 0; attempt < 3; attempt++)
         {
-			if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-				continue;
-			
-            if(is_true(box._box_open))
+			if(is_true(box._box_open) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             {
                 if(isdefined(box.unitrigger_stub) && isdefined(box.unitrigger_stub.trigger))
                     box.unitrigger_stub.trigger notify("trigger", self);
