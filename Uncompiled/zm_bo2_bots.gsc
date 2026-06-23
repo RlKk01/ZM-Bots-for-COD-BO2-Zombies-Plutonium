@@ -142,9 +142,6 @@ init()
 	
     level.box_in_use_by_bot = undefined;
 	
-    if(!isdefined(level.door_being_opened))
-        level.door_being_opened = false;
-	
     // Initialize all caches
 	init_zombie_cache();
     init_vending_cache();
@@ -529,7 +526,7 @@ bot_pickup_powerup()
 			continue;
 		}
 		
-		// Avoid the nuke powerup unless there are no zombies left this round
+		// Avoid the nuke power-up if there are zombies left in the round
 		if(isdefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
 		{
 			zombies_left = level.zombie_total > 0 || get_current_zombie_count() > 0;
