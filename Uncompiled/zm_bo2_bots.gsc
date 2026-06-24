@@ -1946,6 +1946,7 @@ bot_update_wander()
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
 			
+			wait 0.05;
 			continue;
 		}
 		
@@ -1954,6 +1955,7 @@ bot_update_wander()
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
 			
+			wait 0.05;
 			continue;
 		}
 		
