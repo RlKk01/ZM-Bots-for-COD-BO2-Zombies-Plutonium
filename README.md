@@ -21,7 +21,7 @@ The most relevant characteristics that these bots have are:
 
 * They smartly use the Mystery Box, following a weapon tier list to prioritize which guns they take.
 
-* A pickup «Power Up» function with a smart check to avoid to pick up the nuke if there are zombies left, or avoid to pick up the double-points or the insta-kill if there are not zombies left (they can bump by accident to the powerup on specific conditions).
+* A pickup «Power Up» function with a smart check to avoid to pick up the nuke if there are zombies left, or avoid to pick up the double-points or the insta-kill if there are not zombies left in the round (they can bump by accident to the powerup on specific conditions).
 
 * Bots will revive other players, just as a real player would.
 
