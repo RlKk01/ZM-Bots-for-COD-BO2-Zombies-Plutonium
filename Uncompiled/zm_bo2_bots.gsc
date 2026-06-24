@@ -638,8 +638,8 @@ bot_buy_box()
     if(is_true(current_box._box_open) || is_true(current_box._box_opened_by_fire_sale) || 
 	   flag("moving_chest_now") || 
 	  (isdefined(current_box.is_locked) && current_box.is_locked) || 
-	  (isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self) || 
 	  (isdefined(current_box.chest_user) && current_box.chest_user != self) || 
+	  (isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self) || 
 	  (isdefined(level.mystery_box_teddy_locations) && array_contains(level.mystery_box_teddy_locations, current_box.origin))) 
     {
         if(self hasgoal("boxbuy"))
@@ -658,6 +658,14 @@ bot_buy_box()
     {
         if(findpath(self.origin, current_box.origin, undefined, 0, 1))
         {
+			if(!findpath(self.origin, current_box.origin, undefined, 0, 1))
+			{
+				if(self hasgoal("boxbuy"))
+					self cancelgoal("boxbuy");
+				
+				return;
+			}
+			
 			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving))
 			{
 				if(self hasgoal("boxbuy"))
@@ -1402,7 +1410,6 @@ bot_buy_door()
             continue;
 		
 		// Skip doors with no real point cost — these aren't standard purchasable doors
-		// (e.g. Afterlife-only shock-panel doors sharing the "zombie_door" targetname for pathing)
 		if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0)
 			continue;
 		
@@ -1927,6 +1934,8 @@ bot_update_wander()
 		
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
+			wait 0.05;
+			
 			self cancelgoal("wander");
 			continue;
 		}
