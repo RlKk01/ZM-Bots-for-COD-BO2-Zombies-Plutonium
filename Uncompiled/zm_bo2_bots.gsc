@@ -1934,21 +1934,26 @@ bot_update_wander()
 		
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
-			wait 0.05;
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
 			
-			self cancelgoal("wander");
+			wait 0.05;
 			continue;
 		}
 		
         if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
 		{
-			self cancelgoal("wander");
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
 			continue;
 		}
 		
 		if(self getgoal("flee") || self hasgoal("flee"))
 		{
-			self cancelgoal("wander");
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
 			continue;
 		}
 		
@@ -1973,7 +1978,10 @@ bot_update_wander()
 		{
 			if(!findpath(self.origin, player.origin, undefined, 0, 1))
 			{
-				self cancelgoal("wander");
+				if(self getgoal("wander") || self hasgoal("wander"))
+					self cancelgoal("wander");
+				
+				wait 0.05;
 				continue;
 			}
 			
