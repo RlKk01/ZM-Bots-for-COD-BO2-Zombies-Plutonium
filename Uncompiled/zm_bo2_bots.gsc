@@ -526,6 +526,18 @@ bot_pickup_powerup()
 			continue;
 		}
 		
+		// Avoid the double-points or the insta-kill power-up if there are not zombies left in the round
+		if(isdefined(powerup.powerup_name) && (powerup.powerup_name == "double_points" || powerup.powerup_name == "insta_kill"))
+		{
+			zombies_left = level.zombie_total > 0 || get_current_zombie_count() > 0;
+			
+			if(!zombies_left)
+			{
+				self cancelgoal("powerup");
+				continue;
+			}
+		}
+		
 		// Avoid the nuke power-up if there are zombies left in the round
 		if(isdefined(powerup.powerup_name) && powerup.powerup_name == "nuke")
 		{
@@ -1037,9 +1049,6 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "thompson") || 
 	   issubstr(weapon, "ak74u_extclip") || 
 	   issubstr(weapon, "uzi") || 
-	   issubstr(weapon, "mp5") || 
-	   issubstr(weapon, "insas") || 
-	   issubstr(weapon, "pdw57") || 
 	   issubstr(weapon, "mp7") || 
 	   issubstr(weapon, "vector_extclip") || 
 	   issubstr(weapon, "evoskorpion") || 
@@ -1968,11 +1977,11 @@ bot_update_wander()
 		
 		dist_sq = distancesquared(self.origin, player.origin);
 		
-		if(dist_sq > 1440000)
+		if(dist_sq > 640000)
 		{
 			if(self.bot.is_survival)
 				self.bot.is_following = false;
-			else
+			else if(!isdefined(self.bot.follow_blocked) || gettime() >= self.bot.follow_blocked)
 				self.bot.is_following = true;
 		}
 
@@ -1980,12 +1989,12 @@ bot_update_wander()
 		{
 			if(!findpath(self.origin, player.origin, undefined, 0, 1))
 			{
-				if(self getgoal("wander") || self hasgoal("wander"))
-					self cancelgoal("wander");
+				self.bot.is_following = false;
 				
-				wait 0.05;
-				continue;
+				self.bot.follow_blocked = gettime() + 2000; // Don't retry findpath for 2 seconds
 			}
+			else
+				self.bot.is_following = true;
 			
 			self addgoal(player.origin, 100, 1, "wander");
 			

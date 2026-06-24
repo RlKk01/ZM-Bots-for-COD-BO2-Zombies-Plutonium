@@ -146,7 +146,7 @@ bot_combat_main()
 		clip = self getweaponammoclip(weapon);
 		max = weaponclipsize(weapon);
 
-		// Fail-safe: If the clip is full, OR the physical reload was interrupted
+		// Fail-safe: If the clip is full, or the physical reload was interrupted
 		if(clip >= max || !self isreloading())
 		{
 			self.bot.reload_until_full = undefined;
