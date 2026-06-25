@@ -581,7 +581,7 @@ bot_pickup_powerup()
 		
 		self addgoal(powerup.origin, 25, 2, "powerup");
 		
-		if(self atgoal("powerup") || distancesquared(self.origin, powerup.origin) < 2500)
+		if(self atgoal("powerup") || distancesquared(self.origin, powerup.origin) < 625)
 			self cancelgoal("powerup");
 		
 		return;

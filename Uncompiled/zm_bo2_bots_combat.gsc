@@ -259,7 +259,7 @@ bot_should_throw_grenade()
     if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
         return false;
 
-    if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
+    if(self isreloading() || self isswitchingweapons())
         return false;
 
     threat = self.bot.threat.entity;
@@ -277,7 +277,7 @@ bot_should_throw_grenade()
     if(isdefined(self.bot.next_grenade_throw) && gettime() < self.bot.next_grenade_throw)
         return false;
 	
-    cluster_radius_sq = 90000; // 300 units, squared
+    cluster_radius_sq = 160000; // 400 units, squared
 	
     cluster_count = 0;
 	
@@ -292,7 +292,7 @@ bot_should_throw_grenade()
             cluster_count++;
     }
 	
-    if(cluster_count < 4)
+    if(cluster_count < 7)
         return false;
 
     return true;
@@ -308,7 +308,7 @@ bot_combat_throw_grenade()
 	
     self.bot.is_throwing_grenade = true;
 	
-    self.bot.next_grenade_throw = gettime() + 1000;
+    self.bot.next_grenade_throw = gettime() + 500;
 	
     has_frag = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
 	
@@ -350,7 +350,7 @@ bot_combat_throw_grenade()
 	
     self allowattack(1);
 	
-    throw_start_timeout = gettime() + 1000;
+    throw_start_timeout = gettime() + 500;
 	
     while(!self isthrowinggrenade() && gettime() < throw_start_timeout)
     {
