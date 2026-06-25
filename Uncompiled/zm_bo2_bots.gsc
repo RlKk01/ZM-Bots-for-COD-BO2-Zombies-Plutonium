@@ -531,7 +531,7 @@ bot_pickup_powerup()
 	foreach(powerup in powerups)
 	{
 		// Skip checks if the bot is currently doing other stuffs
-		if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			self cancelgoal("powerup");
 			continue;
@@ -1199,7 +1199,7 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 			return;
 		}
 		
-        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
 		{
 			self cancelgoal("weaponbuy");
 			return;
@@ -1961,7 +1961,7 @@ bot_update_wander()
 			continue;
 		}
 		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_buying))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
@@ -2310,7 +2310,7 @@ bot_weapon_failsafe_monitor()
         if(!self isonground())
             continue;
         
-        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
             continue;
 		
         if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())

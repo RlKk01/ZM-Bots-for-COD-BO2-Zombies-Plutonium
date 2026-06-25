@@ -20,7 +20,7 @@ bot_combat_think(damage, attacker, direction)
 	if(self atgoal("flee"))
 		self cancelgoal("flee");
 	
-	if((distancesquared(self.origin, self.bot.threat.position) <= 75625 || isdefined(damage)) && !self hasgoal("wander") && !self hasgoal("revive") && !is_true(self.bot.is_reviving))
+	if((distancesquared(self.origin, self.bot.threat.position) <= 75625 || isdefined(damage)) && !self hasgoal("wander") && !self hasgoal("revive") && !is_true(self.bot.is_reviving) && !self hasgoal("selfrevive") && !is_true(self.bot.is_selfreviving))
 	{
 		if(!isdefined(self.bot.next_flee_scan) || gettime() > self.bot.next_flee_scan)
 		{
@@ -214,7 +214,7 @@ bot_should_melee()
     if(!self isonground() || self getstance() == "prone")
         return false;
 	
-	if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+	if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		return false;
 	
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
@@ -256,7 +256,7 @@ bot_should_throw_grenade()
     if(is_true(self.bot.is_throwing_grenade))
         return false;
 
-    if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+    if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
         return false;
 
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
@@ -827,6 +827,11 @@ bot_can_do_combat()
 	}
 	
 	if(is_true(self.bot.is_reviving))
+	{
+		return 0;
+	}
+	
+	if(is_true(self.bot.is_selfreviving))
 	{
 		return 0;
 	}
