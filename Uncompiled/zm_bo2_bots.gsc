@@ -536,7 +536,7 @@ bot_pickup_powerup()
 			continue;
 		}
 		
-		// Avoid the double-points or the insta-kill power-up if there are not zombies left in the round
+		// Avoid the double-points or the insta-kill power-up if there are no zombies left in the round
 		if(isdefined(powerup.powerup_name) && (powerup.powerup_name == "double_points" || powerup.powerup_name == "insta_kill"))
 		{
 			zombies_left = level.zombie_total > 0 || get_current_zombie_count() > 0;
@@ -2309,7 +2309,6 @@ bot_weapon_failsafe_monitor()
         if(!self isonground())
             continue;
         
-        // Skip checking if the bot is doing other stuffs
         if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_throwing_grenade))
             continue;
 		
