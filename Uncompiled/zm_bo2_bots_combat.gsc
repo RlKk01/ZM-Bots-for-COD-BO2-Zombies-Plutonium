@@ -2,6 +2,7 @@
 #include maps\mp\_utility;
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\zombies\_zm_weapons;
+#include maps\mp\zombies\_zm_laststand;
 
 #include scripts\zm\zm_bo2_bots;
 
@@ -84,6 +85,13 @@ bot_combat_main()
 		
 		return;
 	}
+	
+    if(self bot_should_throw_grenade())
+    {
+        self thread bot_combat_throw_grenade();
+        
+        return;
+    }
 	
 	// Force bot to finish reloading until clip is full
 	if(self isreloading())
@@ -178,6 +186,9 @@ bot_combat_main()
 
 bot_should_melee()
 {
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		return false;
+	
     threat = self.bot.threat.entity;
 	
     if(!isdefined(threat) || !isalive(threat))
@@ -199,7 +210,7 @@ bot_should_melee()
     if(!self isonground() || self getstance() == "prone")
         return false;
 	
-	if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+	if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
 		return false;
 	
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
@@ -231,6 +242,139 @@ bot_combat_melee()
     wait 0.5; // Covers the swing animation so it doesn't spam the button every tick
 
     self.bot.is_meleeing = undefined;
+}
+
+bot_should_throw_grenade()
+{
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		return false;
+	
+    if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_meleeing))
+        return false;
+
+    if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+        return false;
+
+    if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
+        return false;
+
+    threat = self.bot.threat.entity;
+
+    if(!isdefined(threat) || !isalive(threat))
+        return false;
+
+    has_grenade = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
+	
+	has_sticky_grenade = self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm");
+
+    if(!has_grenade && !has_sticky_grenade)
+        return false;
+	
+    if(isdefined(self.bot.next_grenade_throw) && gettime() < self.bot.next_grenade_throw)
+        return false;
+	
+    throw_dist_sq = distancesquared(self.origin, threat.origin);
+	
+    // Do not throw a grenade if the zombies are too far away
+    if(throw_dist_sq > 1000000)
+        return false;
+	
+    cluster_radius_sq = 90000; // 300 units, squared
+	
+    cluster_count = 0;
+	
+    zombies = get_cached_zombies();
+	
+    foreach(zombie in zombies)
+    {
+        if(!isalive(zombie))
+            continue;
+		
+        if(distancesquared(threat.origin, zombie.origin) <= cluster_radius_sq)
+            cluster_count++;
+    }
+	
+    if(cluster_count < 4)
+        return false;
+
+    return true;
+}
+
+bot_combat_throw_grenade()
+{
+    self endon("disconnect");
+    self endon("death");
+
+    if(is_true(self.bot.is_throwing_grenade))
+        return;
+	
+    self.bot.is_throwing_grenade = true;
+	
+    self.bot.next_grenade_throw = gettime() + 2000;
+	
+    has_frag = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
+	
+    has_sticky = self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm");
+	
+    primaries = self getweaponslistprimaries();
+	
+    original_weapon = primaries[0];
+	
+    target = self.bot.threat.entity; // Lock onto the specific target we decided to throw at, before it can change
+	
+    self allowattack(0);
+    self pressads(0);
+	
+    if(has_frag)
+        self switchtoweapon("frag_grenade_zm");
+    else if(has_sticky)
+        self switchtoweapon("sticky_grenade_zm");
+	
+    switch_timeout = gettime() + 1000;
+	
+    while(self isswitchingweapons() && gettime() < switch_timeout)
+        wait 0.05;
+
+    // Bail out early if the target died while we were switching weapons
+    if(!isdefined(target) || !isalive(target))
+    {
+        self switchtoweapon(original_weapon);
+		
+        self.bot.is_throwing_grenade = undefined;
+		
+        return;
+    }
+
+    self bot_lookat_entity(target);
+	
+    wait 0.15; // Let the look-at settle before attacking
+	
+    self allowattack(1);
+	
+    throw_start_timeout = gettime() + 1000;
+	
+    while(!self isthrowinggrenade() && gettime() < throw_start_timeout)
+    {
+        // Bail out immediately if the target dies before the throw even starts
+        if(!isdefined(target) || !isalive(target))
+            break;
+		
+        wait 0.05;
+    }
+	
+    if(self isthrowinggrenade())
+    {
+        throw_end_timeout = gettime() + 3000;
+		
+        while(self isthrowinggrenade() && gettime() < throw_end_timeout)
+            wait 0.05;
+    }
+	
+    self allowattack(0);
+	
+	self switchtoweapon(original_weapon);
+	
+    self.bot.is_throwing_grenade = undefined;
 }
 
 bot_should_hip_fire()

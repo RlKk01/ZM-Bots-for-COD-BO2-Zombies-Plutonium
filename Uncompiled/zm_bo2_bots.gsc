@@ -232,8 +232,16 @@ bot_health()
 	
 	while(1)
 	{
-		self setnormalhealth(1500);
-		self setmaxhealth(1500);
+		if(get_players().size > 4)
+		{
+			self setnormalhealth(1500);
+			self setmaxhealth(1500);
+		}
+		else
+		{
+			self setnormalhealth(3000);
+			self setmaxhealth(3000);
+		}
 		
 		self waittill("player_revived");
 	}
@@ -391,7 +399,9 @@ bot_set_skill()
 	setdvar("bot_minstrafetime", "3000");
 	setdvar("bot_maxstrafetime", "6000");
 	setdvar("scr_help_dist", "512");
-	setdvar("bot_allowgrenades", "1");
+	setdvar("bot_allowgrenades", "0");
+	setdvar("bot_mingrenadetime", "1500");
+	setdvar("bot_maxgrenadetime", "4000");
 	setdvar("bot_meleedist", "70");
 	setdvar("bot_yawspeed", "4");
 	setdvar("bot_sprintdistance", "256");
@@ -520,7 +530,7 @@ bot_pickup_powerup()
 	foreach(powerup in powerups)
 	{
 		// Skip checks if the bot is currently doing other stuffs
-		if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
+		if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
 		{
 			self cancelgoal("powerup");
 			continue;
@@ -678,7 +688,7 @@ bot_buy_box()
 				return;
 			}
 			
-			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving))
+			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
 			{
 				if(self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
@@ -940,7 +950,7 @@ bot_should_take_weapon(boxweapon, currentweapon)
     score_current = bot_get_weapon_score(currentweapon);
     
     // If the bot has a Wonder Weapon (score 100), 
-    // do NOT replace it unless we know for a fact the box is giving another Wonder Weapon.
+    // do not replace it unless we know for a fact the box is giving another Wonder Weapon.
     if(score_current >= 100)
     {
         if(isdefined(boxweapon) && bot_get_weapon_score(boxweapon) >= 100)
@@ -1188,7 +1198,7 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 			return;
 		}
 		
-        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_throwing_grenade))
 		{
 			self cancelgoal("weaponbuy");
 			return;
@@ -1950,7 +1960,7 @@ bot_update_wander()
 			continue;
 		}
 		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_buying))
 		{
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
@@ -2053,7 +2063,7 @@ get_random_walkable_location(origin, range, player)
 	{
 		tries = 0;
 		
-		min_dist_sq = (range * 0.4) * (range * 0.4); // require at least 40% of "range" away — tweak the 0.4 as needed
+		min_dist_sq = (range * 0.4) * (range * 0.4); // Require at least 40% of "range" away — tweak the 0.4 as needed
 		
 		for(;;)
 		{
@@ -2222,7 +2232,7 @@ bot_weapon_switch_think()
         if(!self isonground())
             continue;
 
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_buying))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_buying) || is_true(self.bot.is_throwing_grenade))
             continue;
 
         if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
@@ -2299,8 +2309,8 @@ bot_weapon_failsafe_monitor()
         if(!self isonground())
             continue;
         
-        // Skip checking if the bot is reviving or doing box stuff
-        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_using_box))
+        // Skip checking if the bot is doing other stuffs
+        if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_throwing_grenade))
             continue;
 		
         if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
