@@ -30,3 +30,5 @@ The most relevant characteristics that these bots have are:
 * They will wander around the maps, but without going to far from the host; but, in case it's the survival gamemode, this rule does not apply.
 
 * Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
+
+* Bots will throw grenades at the zombies if there is a group of 4 of them within an small radius.
