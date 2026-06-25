@@ -8,6 +8,9 @@
 
 bot_combat_think(damage, attacker, direction)
 {
+	if(is_true(self.bot.is_throwing_grenade))
+		return;
+	
 	self allowattack(0);
 	self pressads(0);
 	
@@ -88,7 +91,8 @@ bot_combat_main()
 	
     if(self bot_should_throw_grenade())
     {
-        self thread bot_combat_throw_grenade();
+		if(!is_true(self.bot.is_throwing_grenade))
+			self thread bot_combat_throw_grenade();
         
         return;
     }
@@ -249,7 +253,7 @@ bot_should_throw_grenade()
 	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		return false;
 	
-    if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_meleeing))
+    if(is_true(self.bot.is_throwing_grenade))
         return false;
 
     if(is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_using_box) || is_true(self.bot.is_buying))
@@ -271,12 +275,6 @@ bot_should_throw_grenade()
         return false;
 	
     if(isdefined(self.bot.next_grenade_throw) && gettime() < self.bot.next_grenade_throw)
-        return false;
-	
-    throw_dist_sq = distancesquared(self.origin, threat.origin);
-	
-    // Do not throw a grenade if the zombies are too far away
-    if(throw_dist_sq > 1000000)
         return false;
 	
     cluster_radius_sq = 90000; // 300 units, squared
@@ -310,7 +308,7 @@ bot_combat_throw_grenade()
 	
     self.bot.is_throwing_grenade = true;
 	
-    self.bot.next_grenade_throw = gettime() + 2000;
+    self.bot.next_grenade_throw = gettime() + 1000;
 	
     has_frag = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
 	
@@ -320,7 +318,7 @@ bot_combat_throw_grenade()
 	
     original_weapon = primaries[0];
 	
-    target = self.bot.threat.entity; // Lock onto the specific target we decided to throw at, before it can change
+	target = self.bot.threat.entity;
 	
     self allowattack(0);
     self pressads(0);
@@ -334,7 +332,7 @@ bot_combat_throw_grenade()
 	
     while(self isswitchingweapons() && gettime() < switch_timeout)
         wait 0.05;
-
+	
     // Bail out early if the target died while we were switching weapons
     if(!isdefined(target) || !isalive(target))
     {
@@ -344,10 +342,11 @@ bot_combat_throw_grenade()
 		
         return;
     }
-
-    self bot_lookat_entity(target);
 	
-    wait 0.15; // Let the look-at settle before attacking
+	if(isdefined(target))
+		self bot_lookat_entity(target);
+	
+    wait 0.15;
 	
     self allowattack(1);
 	
@@ -358,14 +357,14 @@ bot_combat_throw_grenade()
         // Bail out immediately if the target dies before the throw even starts
         if(!isdefined(target) || !isalive(target))
             break;
-		
+
         wait 0.05;
     }
-	
+
     if(self isthrowinggrenade())
     {
-        throw_end_timeout = gettime() + 3000;
-		
+        throw_end_timeout = gettime() + 1000;
+
         while(self isthrowinggrenade() && gettime() < throw_end_timeout)
             wait 0.05;
     }

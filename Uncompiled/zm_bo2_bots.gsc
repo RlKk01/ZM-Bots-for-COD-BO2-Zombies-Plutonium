@@ -399,7 +399,7 @@ bot_set_skill()
 	setdvar("bot_minstrafetime", "3000");
 	setdvar("bot_maxstrafetime", "6000");
 	setdvar("scr_help_dist", "512");
-	setdvar("bot_allowgrenades", "0");
+	setdvar("bot_allowgrenades", "1");
 	setdvar("bot_mingrenadetime", "1500");
 	setdvar("bot_maxgrenadetime", "4000");
 	setdvar("bot_meleedist", "70");
@@ -430,6 +430,7 @@ bot_spawn_init()
 	self.bot.ignore_entity = [];
 	self.bot.previous_origin = self.origin;
 	self.bot.time_ads = 0;
+	self.bot.is_throwing_grenade = undefined;
 	self.bot.update_c4 = time + randomintrange(1000, 3000);
 	self.bot.update_crate = time + randomintrange(1000, 3000);
 	self.bot.update_crouch = time + randomintrange(1000, 3000);
@@ -2232,7 +2233,7 @@ bot_weapon_switch_think()
         if(!self isonground())
             continue;
 
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_buying) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
             continue;
 
         if(self isswitchingweapons() || self isreloading() || self isthrowinggrenade())
