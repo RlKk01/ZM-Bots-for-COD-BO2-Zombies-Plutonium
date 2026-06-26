@@ -156,6 +156,7 @@ bot_combat_main()
 	if(isdefined(self.bot.reload_until_full) && self.bot.reload_until_full)
 	{
 		clip = self getweaponammoclip(weapon);
+		
 		max = weaponclipsize(weapon);
 
 		// Fail-safe: If the clip is full, or the physical reload was interrupted
@@ -402,29 +403,32 @@ bot_should_hip_fire()
 	
 	switch(class)
 	{
-		case "mg":
-			distcheck = 220;
-			break;
-		
-		case "rifle":
-			distcheck = 250;
-			break;
-		
-		case "spread":
-			distcheck = 300;
-			break;
-		
-		case "smg":
-			distcheck = 350;
+		default:
+			distcheck = 200;
 			break;
 		
 		case "rocketlauncher":
 			distcheck = 0;
 			break;
 		
-		case "pistol":
-		default:
+		case "spread":
+			distcheck = 250;
+			break;
+		
+		case "mg":
+			distcheck = 150;
+			break;
+		
+		case "rifle":
 			distcheck = 200;
+			break;
+		
+		case "smg":
+			distcheck = 400;
+			break;
+		
+		case "pistol":
+			distcheck = 300;
 			break;
 	}
 	
@@ -539,6 +543,7 @@ bot_update_aim(frames)
 	
 	// Forward compensation
 	vel = ent getvelocity();
+	
 	prediction += vel * 0.07;
 
 	if(!threat_is_player())
@@ -566,9 +571,13 @@ bot_update_aim(frames)
 bot_on_target(aim_target, radius)
 {
 	angles = self getplayerangles();
+	
 	forward = anglestoforward(angles);
+	
 	origin = self getplayercamerapos();
+	
 	len = distance(aim_target, origin);
+	
 	end = origin + (forward * len);
 	
 	if(distancesquared(aim_target, end) < (radius * radius))
@@ -705,12 +714,12 @@ bot_weapon_ammo_frac()
 
 bot_select_weapon()
 {
-	if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
+	if(!self isonground())
 	{
 		return;
 	}
 	
-	if(!self isonground())
+	if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
 	{
 		return;
 	}
@@ -723,9 +732,11 @@ bot_select_weapon()
 	}
 	
 	primaries = self getweaponslistprimaries();
+	
 	weapon = self getcurrentweapon();
 	
 	stock = self getweaponammostock(weapon);
+	
 	clip = self getweaponammoclip(weapon);
 	
 	if(weapon == "none")
@@ -839,9 +850,12 @@ bot_can_do_combat()
 bot_dot_product(origin)
 {
 	angles = self getplayerangles();
+	
 	forward = anglestoforward(angles);
+	
 	delta = origin - self getplayercamerapos();
 	delta = vectornormalize(delta);
+	
 	dot = vectordot(forward, delta);
 	
 	return dot;

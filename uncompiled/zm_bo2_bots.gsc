@@ -127,7 +127,7 @@ init()
 {
 	setdvar("kill_overlapping_players", 0);
 	
-	bot_set_skill();
+	bot_set_dvars();
 	
 	flag_wait("initial_blackscreen_passed");
 	
@@ -376,11 +376,13 @@ get_cached_debris()
     return level.debris_cache;
 }
 
-bot_set_skill()
+bot_set_dvars()
 {
+	// Bot collision disabled
 	setdvar("g_playercollision", "nobody");
 	setdvar("g_playerejection", "nobody");
 	
+	// Bot skills
 	setdvar("bot_mindeathtime", "250");
 	setdvar("bot_maxdeathtime", "500");
 	setdvar("bot_minfiretime", "100");
@@ -480,10 +482,7 @@ bot_main()
 			self pressads(0);
 			
 			// Force stop any movement goals every frame
-			if(self hasgoal("boxbuy"))
-				self cancelgoal("boxbuy");
-			
-			if(self hasgoal("wander"))
+			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
 			
 			wait 0.05;
@@ -579,7 +578,7 @@ bot_pickup_powerup()
 		
 		self addgoal(powerup.origin, 25, 2, "powerup");
 		
-		if(self atgoal("powerup") || distancesquared(self.origin, powerup.origin) < 625)
+		if(self atgoal("powerup") || distancesquared(self.origin, powerup.origin) < 25)
 			self cancelgoal("powerup");
 		
 		return;
@@ -610,7 +609,7 @@ bot_buy_box()
 	// Don't try if we're in last stand or can't afford it
     if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
     {
-        if(self hasgoal("boxbuy"))
+        if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
             self cancelgoal("boxbuy");
 		
         return;
@@ -663,7 +662,7 @@ bot_buy_box()
 	  (isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot != self) || 
 	  (isdefined(level.mystery_box_teddy_locations) && array_contains(level.mystery_box_teddy_locations, current_box.origin))) 
     {
-        if(self hasgoal("boxbuy"))
+        if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
             self cancelgoal("boxbuy");
 		
         return;
@@ -681,7 +680,7 @@ bot_buy_box()
         {
 			if(!findpath(self.origin, current_box.origin, undefined, 0, 1))
 			{
-				if(self hasgoal("boxbuy"))
+				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
 				
 				return;
@@ -689,7 +688,7 @@ bot_buy_box()
 			
 			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
 			{
-				if(self hasgoal("boxbuy"))
+				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
 				
 				return;
@@ -706,7 +705,7 @@ bot_buy_box()
             }
 			
             // --- Use the box when close enough ---
-            if(self hasgoal("boxbuy")) 
+            if(self hasgoal("boxbuy"))
 				self cancelgoal("boxbuy");
             
             aim_offset = (randomfloatrange(-5,5), randomfloatrange(-5,5), randomfloatrange(-5,5));
@@ -720,7 +719,7 @@ bot_buy_box()
 			   flag("moving_chest_now") || 
 			  (isdefined(current_box.is_locked) && current_box.is_locked))
 			{
-				if(self hasgoal("boxbuy"))
+				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
 				
 				return;
@@ -737,6 +736,7 @@ bot_buy_box()
 			self pressads(0);
 			
 			self.bot.waiting_for_box_animation = true;
+			
             self.bot.box_payment_time = gettime();
 			
             // Buy box
@@ -813,8 +813,8 @@ bot_monitor_box_animation(box)
     }
 
     // Commit to evaluation (stop movement/goals)
-    self cancelgoal("boxbuy");
-    self cancelgoal("wander");
+	if(self getgoal("wander") || self hasgoal("wander"))
+		self cancelgoal("wander");
     
     box.chest_user = self;
 	
@@ -838,7 +838,9 @@ bot_monitor_box_animation(box)
 
     // Find the bot's worst weapon to replace
     weapons = self getweaponslistprimaries();
+	
     worst_weapon = weapons[0];
+	
     weapon_score = 999;
     
     if(isdefined(weapons) && weapons.size > 0)
@@ -879,6 +881,7 @@ bot_monitor_box_animation(box)
 				else
 				{
 					box notify("trigger", self);
+					
 					self usebuttonpressed();
 				}
 				
@@ -901,7 +904,7 @@ bot_monitor_box_animation(box)
 	if(level.round_number <= 8)
 		self.bot.box_cooldown_duration = randomintrange(90000, 180000);
 	else if(level.round_number <= 15)
-		self.bot.box_cooldown_duration = randomintrange(180000, 300000);
+		self.bot.box_cooldown_duration = randomintrange(270000, 360000);
 	else
 		self.bot.box_cooldown_duration = randomintrange(480000, 900000);
 	
@@ -920,36 +923,37 @@ bot_monitor_box_animation(box)
     self notify("box_usage_complete");
 }
 
-bot_box_cleanup_watcher(zbot, box)
+bot_box_cleanup_watcher(zm_bot, box)
 {
-	zbot endon("disconnect");
+	zm_bot endon("disconnect");
 	
 	level endon("end_game");
 	
     // If the box interaction completes normally, we don't need to do anything
-    zbot endon("box_usage_complete");
+    zm_bot endon("box_usage_complete");
 	
 	// Only reached if the bot died mid-animation
-    zbot waittill("death");
+    zm_bot waittill("death");
 	
-	zbot.bot.waiting_for_box_animation = undefined;
-	zbot.bot.current_box = undefined;
-    zbot.bot.is_using_box = undefined;
+	zm_bot.bot.waiting_for_box_animation = undefined;
+	zm_bot.bot.current_box = undefined;
+    zm_bot.bot.is_using_box = undefined;
 	
-    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zbot)
+    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zm_bot)
         box.chest_user = undefined;
 	
-    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zbot)
+    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zm_bot)
         level.box_in_use_by_bot = undefined;
 }
 
 bot_should_take_weapon(boxweapon, currentweapon)
 {
 	weapons = self getweaponslistprimaries();
+	
     score_current = bot_get_weapon_score(currentweapon);
     
     // If the bot has a Wonder Weapon (score 100), 
-    // do not replace it unless we know for a fact the box is giving another Wonder Weapon.
+    // do not replace it unless we know for a fact the box is giving another Wonder Weapon
     if(score_current >= 100)
     {
         if(isdefined(boxweapon) && bot_get_weapon_score(boxweapon) >= 100)
@@ -959,7 +963,7 @@ bot_should_take_weapon(boxweapon, currentweapon)
     }
 
     // Failsafe: If we can't read the box weapon, only blindly take it or, 
-    // if our current weapon is bad/mid-tier (score less than 90).
+    // if our current weapon is bad/mid-tier (score less than 90)
     if(!isdefined(boxweapon))
     {
         if(score_current >= 90)
@@ -1110,6 +1114,7 @@ bot_buy_wallbuy()
 	}
 	
 	weapon = self getcurrentweapon();
+	
 	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 	
     if(bot_get_weapon_score(weapon) >= 75)
@@ -1175,7 +1180,7 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 	
 	maxtime = gettime() + randomintrange(12000, 15000);
 	
-	while(!self atgoal("weaponbuy") && !distancesquared(self.origin, weapontobuy.origin) < 10000)
+	while(!self atgoal("weaponbuy") && distancesquared(self.origin, weapontobuy.origin) > 10000)
 	{
 		wait 1;
 		
@@ -1185,13 +1190,13 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 			return;
 		}
 		
-		if(gettime() > maxtime)
+        if(!self isonground())
 		{
 			self cancelgoal("weaponbuy");
 			return;
 		}
 		
-        if(!self isonground())
+		if(gettime() > maxtime)
 		{
 			self cancelgoal("weaponbuy");
 			return;
@@ -1227,7 +1232,10 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 	
 	// Re-check score after navigation — bot may have spent points in the meantime
 	if(self.score < weapontobuy.trigger_stub.cost)
+	{
+		self cancelgoal("weaponbuy");
 		return;
+	}
 	
 	self.bot.is_buying = true;
 	
@@ -1337,22 +1345,26 @@ bot_buy_perks()
 				if(getdvar("mapname") == "zm_transit" || getdvar("mapname") == "zm_highrise" || getdvar("mapname") == "zm_buried")
 				{
 					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_flakjacket");
+					
 					costs = array(1500, 3000, 2000, 2000);
 				}
 				else if(getdvar("mapname") == "zm_prison")
 				{
 					perks = array("specialty_fastreload", "specialty_rof", "specialty_grenadepulldeath", "specialty_flakjacket");
+					
 					costs = array(3000, 2000, 2000, 2000);
 				}
 				else if(getdvar("mapname") == "zm_tomb")
 				{
 					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_longersprint", "specialty_movefaster", "specialty_additionalprimaryweapon");
+					
 					costs = array(1500, 3000, 2000, 2500, 4000);
 				}
 			}
 			else
 			{
 				perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_additionalprimaryweapon", "specialty_flakjacket", "specialty_grenadepulldeath");
+				
 				costs = array(1500, 3000, 2000, 2000, 2500, 3000, 1500, 4000, 2000, 2000);
 			}
 			
@@ -1405,7 +1417,9 @@ bot_buy_door()
     
     // Find the closest valid door
     closestdoor = undefined;
-    closestdistsq = 90000; // Reduced max distance for realism
+	
+	// Reduced max distance for realism
+    closestdistsq = 90000;
 	
     foreach(door in doors)
     {
@@ -1441,6 +1455,7 @@ bot_buy_door()
         if(dist_sq < closestdistsq)
         {
             closestdoor = door;
+			
             closestdistsq = dist_sq;
         }
     }
@@ -1488,7 +1503,9 @@ bot_clear_debris()
     
     // Find the closest valid debris pile
     closestdebris = undefined;
-    closestdistsq = 160000; // Reduced max distance for realism
+	
+	// Reduced max distance for realism
+    closestdistsq = 160000;
     
     foreach(pile in debris)
     {
@@ -1524,6 +1541,7 @@ bot_clear_debris()
         if(dist_sq < closestdistsq)
         {
             closestdebris = pile;
+			
             closestdistsq = dist_sq;
         }
     }
@@ -1613,7 +1631,7 @@ bot_revive_teammates()
 {
     if(!maps\mp\zombies\_zm_laststand::player_any_player_in_laststand() || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
-        if(self hasgoal("revive"))
+        if(self getgoal("revive") || self hasgoal("revive"))
         {
             // Release this bot's claim slot when it stops going for the revive
             if(isdefined(self.bot.revive_target))
@@ -1731,11 +1749,11 @@ bot_simulate_revive(teammate)
     
     self cancelgoal("revive");
 	
-    if(self hasgoal("wander"))
-        self cancelgoal("wander");
-    
-    if(self hasgoal("flee"))
+    if(self getgoal("flee") || self hasgoal("flee"))
         self cancelgoal("flee");
+	
+    if(self getgoal("wander") || self hasgoal("wander"))
+        self cancelgoal("wander");
     
     self lookat(teammate.origin);
     
@@ -1746,13 +1764,10 @@ bot_simulate_revive(teammate)
 		
         self bot_clear_enemy();
 		
-        if(self hasgoal("flee"))
+        if(self getgoal("flee") || self hasgoal("flee"))
             self cancelgoal("flee");
 		
-        if(self hasgoal("enemy_patrol"))
-            self cancelgoal("enemy_patrol");
-		
-        if(self hasgoal("wander"))
+        if(self getgoal("wander") || self hasgoal("wander"))
             self cancelgoal("wander");
 	
         if(distancesquared(self.origin, teammate.origin) > 10000)
@@ -1777,8 +1792,8 @@ bot_simulate_revive(teammate)
 	self clearlookat();
 }
 
-// Runs on level so it survives bot/teammate death or disconnect.
-// Clears being_revived immediately if the reviving bot dies mid-revive.
+// Runs on level so it survives bot/teammate death or disconnect
+// Clears being_revived immediately if the reviving bot dies mid-revive
 bot_revive_cleanup_watcher(reviving_bot, teammate)
 {
 	level endon("end_game");
@@ -1845,7 +1860,7 @@ get_closest_downed_teammate()
 				continue;
 			
             // Allow up to 2 bots to assist the same downed player,
-            // or always include a player this bot has already claimed.
+            // or always include a player this bot has already claimed
             claimer_count = isdefined(player.revive_claimer_count) ? player.revive_claimer_count : 0;
 			
             if(claimer_count < 2 || self.bot.revive_target == player)
@@ -1867,7 +1882,7 @@ bot_self_revive_afterlife()
 {
     if(!is_true(self.afterlife) || !isdefined(self.e_afterlife_corpse))
     {
-        if(self hasgoal("selfrevive"))
+        if(self getgoal("selfrevive") || self hasgoal("selfrevive"))
             self cancelgoal("selfrevive");
 
         self.bot.is_selfreviving = false;
@@ -1903,23 +1918,23 @@ bot_simulate_self_revive(corpse)
     self.bot.is_selfreviving = true;
 
     self cancelgoal("selfrevive");
-
-    if(self hasgoal("wander"))
-        self cancelgoal("wander");
-
-    if(self hasgoal("flee"))
+	
+    if(self getgoal("flee") || self hasgoal("flee"))
         self cancelgoal("flee");
-
+	
+    if(self getgoal("wander") || self hasgoal("wander"))
+        self cancelgoal("wander");
+	
     self lookat(corpse.origin);
 
     while(is_true(self.afterlife) && isdefined(self.e_afterlife_corpse) && self.e_afterlife_corpse == corpse)
     {
         self bot_clear_enemy();
 
-        if(self hasgoal("flee"))
+        if(self getgoal("flee") || self hasgoal("flee"))
             self cancelgoal("flee");
 
-        if(self hasgoal("wander"))
+        if(self getgoal("wander") || self hasgoal("wander"))
             self cancelgoal("wander");
 
         if(distancesquared(self.origin, corpse.origin) > 10000)
@@ -1944,7 +1959,7 @@ bot_update_wander()
 	
 	level endon("end_game");
 	
-	self.bot.is_survival = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
+	self.bot.is_on_survival_gamemode = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
 	
 	for(;;)
 	{
@@ -1988,7 +2003,7 @@ bot_update_wander()
 		
 		if(dist_sq > 640000)
 		{
-			if(self.bot.is_survival)
+			if(self.bot.is_on_survival_gamemode)
 				self.bot.is_following = false;
 			else if(!isdefined(self.bot.follow_blocked) || gettime() >= self.bot.follow_blocked)
 				self.bot.is_following = true;
@@ -2034,7 +2049,7 @@ bot_update_wander()
 			
 			if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 			{
-				if(self.bot.is_survival)
+				if(self.bot.is_on_survival_gamemode)
 					location = get_random_walkable_location(self.origin, 1800, self);
 				else
 					location = get_random_walkable_location(self.origin, 800, self);
@@ -2056,9 +2071,9 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
-	self.bot.is_survival = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
+	self.bot.is_on_survival_gamemode = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
 	
-	if(self.bot.is_survival)
+	if(self.bot.is_on_survival_gamemode)
 	{
 		tries = 0;
 		
@@ -2070,6 +2085,7 @@ get_random_walkable_location(origin, range, player)
 			y = origin[1] + randomintrange(range * -1, range);
 			
 			trace_start = (x, y, origin[2] + 500);
+			
 			trace_end = (x, y, origin[2] - 500);
 			
 			ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
@@ -2274,6 +2290,7 @@ bot_switch_weapon(current_weapon, primaries)
             continue;
 
         clip = self getweaponammoclip(weapon);
+		
         stock = self getweaponammostock(weapon);
 
         if(!clip && !stock)
@@ -2319,6 +2336,7 @@ bot_weapon_failsafe_monitor()
             continue;
 
         weapon = self getcurrentweapon();
+		
         primaries = self getweaponslistprimaries();
         
         // If they somehow have no current weapon, or their primary inventory is completely empty
@@ -2328,6 +2346,7 @@ bot_weapon_failsafe_monitor()
 
             // Re-check after the buffer
             weapon = self getcurrentweapon();
+			
             primaries = self getweaponslistprimaries();
 
             if(weapon != "none" && isdefined(primaries) && primaries.size > 0)
@@ -2531,6 +2550,7 @@ bot_give_ammo()
 bot_update_weapon()
 {
 	weapon = self getcurrentweapon();
+	
 	primaries = self getweaponslistprimaries();
 	
 	foreach(primary in primaries)
