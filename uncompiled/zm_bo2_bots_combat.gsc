@@ -101,6 +101,7 @@ bot_combat_main()
 	if(self isreloading())
 	{
 		clip = self getweaponammoclip(weapon);
+		
 		max = weaponclipsize(weapon);
 
 		if(clip < max)
