@@ -8,6 +8,9 @@
 
 bot_combat_think(damage, attacker, direction)
 {
+	if(is_true(self.bot.is_throwing_grenade))
+		return;
+	
 	self allowattack(0);
 	self pressads(0);
 	
@@ -253,7 +256,7 @@ bot_should_throw_grenade()
     if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
         return false;
 	
-    if(self isreloading() || self isswitchingweapons())
+    if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
         return false;
 
     threat = self.bot.threat.entity;
@@ -271,7 +274,7 @@ bot_should_throw_grenade()
     if(isdefined(self.bot.next_grenade_throw) && gettime() < self.bot.next_grenade_throw)
         return false;
 	
-    cluster_radius_sq = 250000; // 500 units, squared
+    cluster_radius_sq = 1000000;
 	
     cluster_count = 0;
 	
@@ -357,7 +360,7 @@ bot_combat_throw_grenade()
 	
     if(self isthrowinggrenade())
     {
-        throw_end_timeout = gettime() + 750;
+        throw_end_timeout = gettime() + 1000;
 
         while(self isthrowinggrenade() && gettime() < throw_end_timeout)
             wait 0.05;

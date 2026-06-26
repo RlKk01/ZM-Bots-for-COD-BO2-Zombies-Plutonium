@@ -400,8 +400,6 @@ bot_set_skill()
 	setdvar("bot_maxstrafetime", "6000");
 	setdvar("scr_help_dist", "512");
 	setdvar("bot_allowgrenades", "1");
-	setdvar("bot_mingrenadetime", "1500");
-	setdvar("bot_maxgrenadetime", "4000");
 	setdvar("bot_meleedist", "70");
 	setdvar("bot_yawspeed", "4");
 	setdvar("bot_sprintdistance", "256");
