@@ -639,14 +639,14 @@ bot_buy_box()
     if(!isdefined(level.chests) || level.chests.size == 0 || !isdefined(level.chest_index) || level.chest_index >= level.chests.size)
         return;
 	
-    if(!isdefined(level.bot_last_check_chest_index))
-        level.bot_last_check_chest_index = level.chest_index;
+    if(!isdefined(level.bot_check_chest_index))
+        level.bot_check_chest_index = level.chest_index;
 	
-    if(level.bot_last_check_chest_index != level.chest_index)
+    if(level.bot_check_chest_index != level.chest_index)
     {
         level.mystery_box_teddy_locations = [];
 		
-        level.bot_last_check_chest_index = level.chest_index;
+        level.bot_check_chest_index = level.chest_index;
     }
 	
     current_box = level.chests[level.chest_index];
@@ -1184,6 +1184,13 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 	{
 		wait 1;
 		
+        // Skip on Mob of the Dead while the bot is in afterlife mode
+        if(getdvar("mapname") == "zm_prison" && is_true(self.afterlife))
+		{
+			self cancelgoal("weaponbuy");
+			return;
+		}
+		
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
 			self cancelgoal("weaponbuy");
@@ -1203,13 +1210,6 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 		}
 		
         if(is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
-		{
-			self cancelgoal("weaponbuy");
-			return;
-		}
-		
-        // Skip on Mob of the Dead while the bot is in afterlife mode
-        if(getdvar("mapname") == "zm_prison" && is_true(self.afterlife))
 		{
 			self cancelgoal("weaponbuy");
 			return;
@@ -1280,6 +1280,7 @@ bot_pack_gun()
 			if(distancesquared(pack.origin, self.origin) < 999999999 && self.score >= 5000)
 			{
 				weapon = self getcurrentweapon();
+				
 				upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 				
 				if(issubstr(weapon, "slipgun") && !issubstr(weapon, "upgraded") && weapon == upgrade_name)
@@ -1418,7 +1419,7 @@ bot_buy_door()
     // Find the closest valid door
     closestdoor = undefined;
 	
-	// Reduced max distance for realism
+	// Reduced the interaction distance to make it a little more realistic
     closestdistsq = 90000;
 	
     foreach(door in doors)
@@ -1504,8 +1505,8 @@ bot_clear_debris()
     // Find the closest valid debris pile
     closestdebris = undefined;
 	
-	// Reduced max distance for realism
-    closestdistsq = 160000;
+	// Reduced the interaction distance to make it a little more realistic
+    closestdistsq = 90000;
     
     foreach(pile in debris)
     {
@@ -1672,7 +1673,7 @@ bot_revive_teammates()
     }
     else
     {
-        // If the teammate we claimed somehow got revived or died before we got there
+        // If the teammate we claimed somehow got revived or died before we got there, clear the flags
         if(isdefined(self.bot.revive_target) && !self.bot.revive_target maps\mp\zombies\_zm_laststand::player_is_in_laststand())
         {
             if(isdefined(self.bot.revive_target.revive_claimer_count) && self.bot.revive_target.revive_claimer_count > 0)
@@ -2238,6 +2239,13 @@ bot_weapon_switch_think()
     {
         wait randomfloatrange(3.0, 5.0);
 		
+        // Skip on Mob of the Dead while the bot is in afterlife mode
+        if(getdvar("mapname") == "zm_prison" && is_true(self.afterlife))
+		{
+			wait 0.05;
+			continue;
+		}
+		
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
 			wait 0.05;
@@ -2316,6 +2324,13 @@ bot_weapon_failsafe_monitor()
     {
         wait 1;
 		
+        // Skip on Mob of the Dead while the bot is in afterlife mode
+        if(getdvar("mapname") == "zm_prison" && is_true(self.afterlife))
+		{
+			wait 0.05;
+			continue;
+		}
+		
 		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		{
 			wait 0.05;
@@ -2329,10 +2344,6 @@ bot_weapon_failsafe_monitor()
             continue;
 		
         if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
-            continue;
-		
-        // Skip on Mob of the Dead while the bot is in afterlife mode
-        if(getdvar("mapname") == "zm_prison" && is_true(self.afterlife))
             continue;
 
         weapon = self getcurrentweapon();
