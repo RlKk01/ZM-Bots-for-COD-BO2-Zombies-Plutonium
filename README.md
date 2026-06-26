@@ -31,4 +31,4 @@ The most relevant characteristics that these bots have are:
 
 * Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
 
-* Bots will throw grenades at the zombies if there is a group of 7 of them within an small radius.
+* Bots will throw grenades at the zombies if there is a group of 5 of them within an small radius.
