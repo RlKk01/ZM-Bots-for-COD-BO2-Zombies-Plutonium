@@ -4,11 +4,11 @@ To add bots in-game, simply open the console and type "set zm_bots *", where the
 
 Also, if you want to play with this mod along with another one, e.g., a mod that adds custom weapons, you just need to drag the file zmbots.iwd inside the "zm_bots" folder and drag it to the other mod folder.
 
-If anyone wants to improve this mod, feel free to try, it’s completely open source.
-
 To install this mod, press «Win + R» and paste the following path: «%localappdata%\Plutonium\storage\t6», then press Enter.
 
 Then, move the mod folder to the "mods" folder; if you don't have the "mods" folder, just create it.
+
+If anyone wants to improve this mod, feel free to try, it’s completely open source.
 
 The most relevant characteristics that these bots have are:
 
