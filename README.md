@@ -14,10 +14,9 @@ The most relevant characteristics that these bots have are:
 
 * They will purchase doors or clear debris within a small radius range.
 
-* They will buy wall-guns on a determined radius.
+* They will buy wall-guns or pap their weapons on a determined radius.
 
-* They will buy perks and upgrade their weapons without needing to be close to the machines.
-  (Note: These two features are currently a work in progress and will be improved.)
+* They will buy perks within a large radius.
 
 * They smartly use the Mystery Box, following a weapon tier list to prioritize which guns they take.
 
@@ -32,3 +31,5 @@ The most relevant characteristics that these bots have are:
 * Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
 
 * Bots will throw grenades at the zombies if there is a group of 5 of them within an small radius.
+
+* Bots will get the shield if the player has it.
