@@ -149,7 +149,7 @@ init()
     init_door_cache();
     init_debris_cache();
 	
-	bot_amount = getdvarintdefault("zm_bots", 0);
+	bot_amount = getdvarintdefault("zm_bots", 7);
 	
 	for(i = 0; i < bot_amount; i++)
 		spawn_bot();
