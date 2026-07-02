@@ -4,7 +4,9 @@ To install this mod, press «Win + R» and paste the following path: «%localapp
 
 Then, move the "zm_bots" folder to the "mods" folder; if you don't have the "mods" folder, just create it.
 
-If you want to play with this mod along with another one, e.g., a mod that adds custom weapons, you just need to drag the file zmbots.iwd inside the "zm_bots" folder and drag it to the other mod folder.
+If you want to play with more than 3 bots, just increase the party size in the custom game lobby; with 7 bots being the maximum allowed.
+
+Also, if you want to play with this mod along with another one, e.g., a mod that adds custom weapons, you just need to drag the file zmbots.iwd inside the "zm_bots" folder and drag it to the other mod folder.
 
 If anyone wants to improve this mod, feel free to try, it’s completely open source.
 
