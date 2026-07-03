@@ -283,8 +283,8 @@ bot_should_throw_grenade()
 	
     throw_dist_sq = distancesquared(self.origin, threat.origin);
 	
-    // Don't throw if is too close or too far
-    if(throw_dist_sq < 5625 || throw_dist_sq > 1000000)
+    // Don't throw if is too far
+    if(throw_dist_sq > 1000000)
         return false;
 	
     cluster_radius_sq = 250000;

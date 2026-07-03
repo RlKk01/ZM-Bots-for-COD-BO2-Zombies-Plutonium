@@ -245,8 +245,11 @@ bot_set_perks()
 		}
 		
 		self setperk("specialty_rof");
+		self setperk("specialty_stalker");
+		self setperk("specialty_fastads");
 		self setperk("specialty_deadshot");
 		self setperk("specialty_flakjacket");
+		self setperk("specialty_unlimitedsprint");
 		
 		self waittill("player_revived");
 	}
@@ -860,11 +863,24 @@ bot_monitor_box_animation(box)
 			if(is_true(box._box_open) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             {
                 if(isdefined(box.unitrigger_stub) && isdefined(box.unitrigger_stub.trigger))
+				{
+					self allowattack(0);
+					self pressads(0);
+					
                     box.unitrigger_stub.trigger notify("trigger", self);
+				}
                 else if(isdefined(box.use_trigger))
+				{
+					self allowattack(0);
+					self pressads(0);
+					
                     box.use_trigger notify("trigger", self);
+				}
 				else
 				{
+					self allowattack(0);
+					self pressads(0);
+					
 					box notify("trigger", self);
 					
 					self usebuttonpressed();
@@ -2265,7 +2281,7 @@ execute_bot_teleport()
     }
     else 
     {
-        self iprintln("you must be on the ground to teleport bots.");
+        self iprintln("You must be on the ground to teleport bots.");
     }
 }
 
@@ -2297,7 +2313,7 @@ bot_staggered_teleport(bots_to_teleport, offsets)
     }
     
     if(teleported > 0)
-        self iprintln("bots teleported! (" + teleported + "/" + bots_to_teleport.size + ")");
+        self iprintln("Bots teleported! (" + teleported + "/" + bots_to_teleport.size + ")");
 }
 
 // Watches for any real player carrying the riot shield and keeps bots
