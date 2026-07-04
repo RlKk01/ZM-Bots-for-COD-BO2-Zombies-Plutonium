@@ -229,10 +229,18 @@ bot_set_perks()
 	
 	level endon("end_game");
 	
+	self.bot.is_on_survival_gamemode = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
+	
 	wait 1;
 	
 	while(1)
 	{
+		if(self.bot.is_on_survival_gamemode)
+		{
+			self setnormalhealth(1500);
+			self setmaxhealth(1500);
+		}
+		
 		if(get_players().size > 4)
 		{
 			self setnormalhealth(1500);
@@ -240,8 +248,8 @@ bot_set_perks()
 		}
 		else
 		{
-			self setnormalhealth(3000);
-			self setmaxhealth(3000);
+			self setnormalhealth(6000);
+			self setmaxhealth(6000);
 		}
 		
 		self setperk("specialty_rof");
@@ -2106,7 +2114,7 @@ bot_update_wander()
 			{
 				self.bot.is_following = false;
 				
-				self.bot.follow_blocked = gettime() + 2000; // Don't retry findpath for 2 seconds
+				self.bot.follow_blocked = gettime() + 5000; // Don't retry findpath for 5 seconds
 			}
 			else
 				self.bot.is_following = true;
@@ -2242,7 +2250,7 @@ manual_bot_teleport_monitor()
             // Reset the timer and add a 1-second cooldown so mashing the button doesn't spam teleports
             last_press_time = 0;
 			
-            wait 1.0; 
+            wait 1; 
         }
         else
         {
@@ -2329,7 +2337,7 @@ bot_shield_sync_think()
 	
 	for(;;)
 	{
-		wait 2;
+		wait 1;
 		
 		has_shield_weapon = self hasweapon("riotshield_zm") || self hasweapon("alcatraz_shield_zm") || self hasweapon("tomb_shield_zm");
 		
@@ -2602,9 +2610,9 @@ bot_weapon_switch_think()
 
         if(current == "none")
             continue;
-
+		
         weapon = bot_switch_weapon(current, primaries);
-
+		
         if(isdefined(weapon) && weapon != current)
         {
             self allowattack(0);

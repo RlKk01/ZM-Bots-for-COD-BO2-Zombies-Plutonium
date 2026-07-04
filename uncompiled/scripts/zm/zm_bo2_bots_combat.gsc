@@ -825,6 +825,11 @@ bot_can_do_combat()
 		return 0;
 	}
 	
+	if(is_true(self.bot.is_getting_shield))
+	{
+		return 0;
+	}
+	
 	if(is_true(self.bot.is_using_box))
 	{
 		return 0;
