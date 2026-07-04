@@ -242,8 +242,8 @@ bot_set_perks()
 		}
 		else
 		{
-			self setnormalhealth(6000);
-			self setmaxhealth(6000);
+			self setnormalhealth(3000);
+			self setmaxhealth(3000);
 		}
 		
 		self setperk("specialty_rof");
@@ -2470,6 +2470,9 @@ bot_give_shield()
 		
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
 		{
+			self allowattack(0);
+			self pressads(0);
+			
 			self switchtoweapon(current_weapon);
 			
 			switch_timeout = gettime() + 1000;
@@ -2503,6 +2506,9 @@ bot_give_shield()
 		
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "alcatraz_shield_zm")
 		{
+			self allowattack(0);
+			self pressads(0);
+			
 			self switchtoweapon(current_weapon);
 			
 			switch_timeout = gettime() + 1000;
@@ -2536,6 +2542,9 @@ bot_give_shield()
 		
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
 		{
+			self allowattack(0);
+			self pressads(0);
+			
 			self switchtoweapon(current_weapon);
 			
 			switch_timeout = gettime() + 1000;
@@ -2719,27 +2728,6 @@ bot_weapon_failsafe_monitor()
 			self setspawnweapon(fallback_weapon);
         }
     }
-}
-
-bot_update_weapon()
-{
-	weapon = self getcurrentweapon();
-	
-	primaries = self getweaponslistprimaries();
-	
-	i = 0;
-	
-	foreach(primary in primaries)
-	{
-		if(primary != weapon)
-		{
-			self switchtoweapon(primary);
-			
-			return;
-		}
-		
-		i++;
-	}
 }
 
 bot_give_ammo()

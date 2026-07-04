@@ -13,6 +13,14 @@ bot_combat_think(damage, attacker, direction)
 	if(is_true(self.bot.is_throwing_grenade))
 		return;
 	
+	if(is_true(self.bot.is_getting_shield))
+	{
+		self allowattack(0);
+		self pressads(0);
+		
+		return;
+	}
+	
 	self allowattack(0);
 	self pressads(0);
 	
@@ -121,7 +129,7 @@ bot_combat_main()
 	
 	ads = 0;
 	
-	if(!self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
+	if(!self bot_should_hip_fire() && self.bot.threat.dot > 0.85)
 	{
 		ads = 1;
 	}
@@ -287,7 +295,7 @@ bot_should_throw_grenade()
     if(throw_dist_sq > 1000000)
         return false;
 	
-    cluster_radius_sq = 250000;
+    cluster_radius_sq = 160000;
 	
     cluster_count = 0;
 	
@@ -527,21 +535,21 @@ bot_update_aim(frames)
 			
 			case "mg":
 			case "rifle":
-				aim_offset = 10;
+				aim_offset = 12;
 				break;
 			
 			case "spread":
 			case "smg":
 			case "pistol":
-				aim_offset = 5;
+				aim_offset = 8;
 				break;
 		}
 		
 		// Distance correction
 		if(dist > 800)
-			aim_offset -= 10;
+			aim_offset -= 12;
 		else if(dist < 600)
-			aim_offset += 15;
+			aim_offset += 12;
 		
 		return prediction + (0, 0, height + aim_offset);
 	}
@@ -585,181 +593,6 @@ bot_dot_product(origin)
 	return dot;
 }
 
-bot_patrol_near_enemy(damage, attacker, direction)
-{
-	if(isdefined(attacker))
-	{
-		self bot_lookat_entity(attacker);
-	}
-	
-	if(!isdefined(attacker))
-	{
-		attacker = self bot_get_closest_enemy(self.origin);
-	}
-	
-	if(!isdefined(attacker))
-	{
-		return;
-	}
-	
-	node = bot_nearest_node(attacker.origin);
-	
-	if(!isdefined(node))
-	{
-		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "path", 8);
-		
-		if(nodes.size)
-		{
-			node = nodes[0];
-		}
-	}
-	
-	if(isdefined(node))
-	{
-		if(isdefined(damage))
-		{
-			self addgoal(node, 24, 4, "enemy_patrol");
-			
-			return;
-		}
-		else
-		{
-			self addgoal(node, 24, 2, "enemy_patrol");
-		}
-	}
-}
-
-bot_select_weapon()
-{
-	if(!self isonground())
-	{
-		return;
-	}
-	
-	if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
-	{
-		return;
-	}
-	
-	ent = self.bot.threat.entity;
-	
-	if(!isdefined(ent))
-	{
-		return;
-	}
-	
-	primaries = self getweaponslistprimaries();
-	
-	weapon = self getcurrentweapon();
-	
-	stock = self getweaponammostock(weapon);
-	
-	clip = self getweaponammoclip(weapon);
-	
-	if(weapon == "none")
-	{
-		return;
-	}
-	
-	if(weapon == "fhj18_mp" && !target_istarget(ent))
-	{
-		foreach(primary in primaries)
-		{
-			if(primary != weapon)
-			{
-				self switchtoweapon(primary);
-				
-				return;
-			}
-		}
-		
-		return;
-	}
-	
-	if(!clip)
-	{
-		if(stock)
-		{
-			if(weaponhasattachment(weapon, "fastreload"))
-			{
-				return;
-			}
-		}
-		
-		i = 0;
-		
-		while(i < primaries.size)
-		{
-			if(primaries[i] == weapon || primaries[i] == "fhj18_mp")
-			{
-				i++;
-				continue;
-			}
-			
-			if(self getweaponammoclip(primaries[i]))
-			{
-				self switchtoweapon(primaries[i]);
-				
-				return;
-			}
-			i++;
-		}
-		
-		if(self bot_has_lmg())
-		{
-			i = 0;
-			
-			while(i < primaries.size)
-			{
-				if(primaries[i] == weapon || primaries[i] == "fhj18_mp")
-				{
-					i++;
-					continue;
-				}
-				else
-				{
-					self switchtoweapon(primaries[i]);
-					
-					return;
-				}
-				i++;
-			}
-		}
-	}
-}
-
-bot_has_weapon_class(class)
-{
-	if(self isreloading())
-	{
-		return 0;
-	}
-	
-	weapon = self getcurrentweapon();
-	
-	if(weapon == "none")
-	{
-		return 0;
-	}
-	
-	if(weaponclass(weapon) == class)
-	{
-		return 1;
-	}
-	
-	return 0;
-}
-
-bot_has_lmg()
-{
-	if(bot_has_weapon_class("mg"))
-	{
-		return 1;
-	}
-	
-	return 0;
-}
-
 bot_has_ballistic_knife()
 {
     weapon = self getcurrentweapon();
@@ -770,62 +603,9 @@ bot_has_ballistic_knife()
     return false;
 }
 
-bot_weapon_ammo_frac()
-{
-	if(self isreloading() || self isswitchingweapons())
-	{
-		return 0;
-	}
-	
-	weapon = self getcurrentweapon();
-	
-	if(weapon == "none")
-	{
-		return 1;
-	}
-	
-	total = weaponclipsize(weapon);
-	
-	if(total <= 0)
-	{
-		return 1;
-	}
-	
-	current = self getweaponammoclip(weapon);
-	
-	return current / total;
-}
-
-bot_can_reload()
-{
-	weapon = self getcurrentweapon();
-	
-	if(weapon == "none")
-	{
-		return 0;
-	}
-	
-	if(!self getweaponammostock(weapon))
-	{
-		return 0;
-	}
-	
-	if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
-	{
-		return 0;
-	}
-	
-	return 1;
-}
-
 bot_can_do_combat()
 {
 	if(self ismantling() || self isonladder())
-	{
-		return 0;
-	}
-	
-	if(is_true(self.bot.is_getting_shield))
 	{
 		return 0;
 	}
