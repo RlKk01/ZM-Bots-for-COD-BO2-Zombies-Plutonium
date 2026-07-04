@@ -235,13 +235,7 @@ bot_set_perks()
 	
 	while(1)
 	{
-		if(self.bot.is_on_survival_gamemode)
-		{
-			self setnormalhealth(1500);
-			self setmaxhealth(1500);
-		}
-		
-		if(get_players().size > 4)
+		if(self.bot.is_on_survival_gamemode || get_players().size > 4)
 		{
 			self setnormalhealth(1500);
 			self setmaxhealth(1500);
