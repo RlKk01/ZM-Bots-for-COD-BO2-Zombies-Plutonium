@@ -3,6 +3,7 @@
 #include maps\mp\zombies\_zm_laststand;
 
 #include scripts\zm\zm_bo2_bots;
+#include scripts\zm\zm_bo2_bots_damage;
 
 bot_combat_think(damage, attacker, direction)
 {

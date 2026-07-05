@@ -12,6 +12,7 @@
 #include maps\mp\zombies\_zm_afterlife;
 
 #include scripts\zm\zm_bo2_bots_combat;
+#include scripts\zm\zm_bo2_bots_damage;
 
 main()
 {
@@ -229,22 +230,12 @@ bot_set_perks()
 	
 	level endon("end_game");
 	
-	self.bot.is_on_survival_gamemode = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
-	
 	wait 1;
 	
 	while(1)
 	{
-		if(self.bot.is_on_survival_gamemode || get_players().size > 4)
-		{
-			self setnormalhealth(1500);
-			self setmaxhealth(1500);
-		}
-		else
-		{
-			self setnormalhealth(3000);
-			self setmaxhealth(3000);
-		}
+		self setnormalhealth(1200);
+		self setmaxhealth(1200);
 		
 		self setperk("specialty_rof");
 		self setperk("specialty_stalker");
