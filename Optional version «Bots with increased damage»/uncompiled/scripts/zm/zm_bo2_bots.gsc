@@ -12,6 +12,7 @@
 #include maps\mp\zombies\_zm_afterlife;
 
 #include scripts\zm\zm_bo2_bots_combat;
+#include scripts\zm\zm_bo2_bots_damage;
 
 main()
 {
