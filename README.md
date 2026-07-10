@@ -24,7 +24,7 @@ The most relevant characteristics that these bots have are:
 
 * They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
 
-* They will wander around the maps, but without going to far from the host; but, in case it's the survival gamemode, the rule "but without going to far from the host" does not apply.
+* Bots can be commanded using the "follow", "stay" or "wander" commands, by pressing the "2" key on the keyboard or, if using a controller, by pressing the down arrow on the directional pad.
 
 * Bots will get the shield if the player has it.
 
