@@ -96,26 +96,26 @@ bot_combat_think(damage, attacker, direction)
 
 bot_patrol_near_enemy(damage, attacker, direction)
 {
-	if(isDefined(attacker))
+	if(isdefined(attacker))
 	{
 		self bot_lookat_entity(attacker);
 	}
 	
-	if(!isDefined(attacker))
+	if(!isdefined(attacker))
 	{
 		attacker = self bot_get_closest_enemy(self.origin);
 	}
 	
-	if(!isDefined(attacker))
+	if(!isdefined(attacker))
 	{
 		return;
 	}
 	
 	node = bot_nearest_node(attacker.origin);
 	
-	if(!isDefined(node))
+	if(!isdefined(node))
 	{
-		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "Path", 8);
+		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "path", 8);
 		
 		if(nodes.size)
 		{
@@ -123,11 +123,12 @@ bot_patrol_near_enemy(damage, attacker, direction)
 		}
 	}
 	
-	if(isDefined(node))
+	if(isdefined(node))
 	{
-		if(isDefined(damage))
+		if(isdefined(damage))
 		{
 			self addgoal(node, 24, 4, "enemy_patrol");
+			
 			return;
 		}
 		else
