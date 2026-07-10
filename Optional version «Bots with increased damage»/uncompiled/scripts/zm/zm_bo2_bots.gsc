@@ -2746,7 +2746,6 @@ manual_bot_teleport_monitor()
     level endon("end_game");
     
     self notifyonplayercommand("teleport_pressed", "+actionslot 3");
-    self notifyonplayercommand("teleport_pressed", "+actionslot 4");
     
     last_press_time = 0;
     
@@ -2841,11 +2840,11 @@ bot_command_mode_monitor()
 
     self.combo_last_use = 0;
 
-    self notifyonplayercommand("bot_combo_key6_pressed", "+actionslot 2");
+    self notifyonplayercommand("command_pressed", "+actionslot 2");
 
     for(;;)
     {
-        self waittill("bot_combo_key6_pressed");
+        self waittill("command_pressed");
 
         current_time = gettime();
 
