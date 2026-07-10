@@ -1,5 +1,7 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
+#include maps\mp\zombies\_zm_utility;
+#include maps\mp\zombies\_zm_weapons;
 #include maps\mp\zombies\_zm_laststand;
 
 #include scripts\zm\zm_bo2_bots;
@@ -26,32 +28,41 @@ bot_combat_think(damage, attacker, direction)
 	if(self atgoal("flee"))
 		self cancelgoal("flee");
 	
-	if((distancesquared(self.origin, self.bot.threat.position) <= 75625 || isdefined(damage)) && !self hasgoal("wander") && !self hasgoal("revive") && !is_true(self.bot.is_reviving) && !self hasgoal("selfrevive") && !is_true(self.bot.is_selfreviving))
+	self bot_update_panic_state();
+	
+	if(is_true(self.bot.is_panicking))
 	{
-		if(!isdefined(self.bot.next_flee_scan) || gettime() > self.bot.next_flee_scan)
+		self bot_panic_evade();
+	}
+	else if(!self hasgoal("wander") && !self hasgoal("revive") && !is_true(self.bot.is_reviving) && !self hasgoal("selfrevive") && !is_true(self.bot.is_selfreviving))
+	{
+		handled = false;
+		
+		if(isdefined(level.bot_train_leader))
 		{
-			if(get_players().size > 4)
-				self.bot.next_flee_scan = gettime() + 3000;
+			if(level.bot_train_leader == self)
+				handled = self bot_leader_kite_update();
 			else
-				self.bot.next_flee_scan = gettime() + 1500;
-			
-			nodes = getnodesinradiussorted(self.origin, 1024, 256, 512);
-			
-			nearest = bot_nearest_node(self.origin);
-			
-			if(isdefined(nearest) && !self hasgoal("flee") && isdefined(nodes))
+				handled = self bot_maintain_kiting_formation();
+		}
+		
+		if(!handled && (distancesquared(self.origin, self.bot.threat.position) <= 75625 || isdefined(damage)))
+		{
+			if(!isdefined(self.bot.next_flee_scan) || gettime() > self.bot.next_flee_scan)
 			{
-				foreach(node in nodes)
+				if(get_players().size > 4)
+					self.bot.next_flee_scan = gettime() + 3000;
+				else
+					self.bot.next_flee_scan = gettime() + 1500;
+				
+				location = get_random_walkable_location(self.origin, 600, self);
+				
+				if(!self hasgoal("flee") && isdefined(location) && location != self.origin)
 				{
-					if(!nodesvisible(nearest, node) && randomint(100) < 512 && findpath(self.origin, node.origin, undefined, 0, 1))
-					{
-					    if(self getgoal("wander") || self hasgoal("wander"))
-							self cancelgoal("wander");
-						
-						self addgoal(node.origin, 256, 4, "flee");
-						
-						break;
-					}
+					if(self getgoal("wander") || self hasgoal("wander"))
+						self cancelgoal("wander");
+					
+					self addgoal(location, 256, 4, "flee");
 				}
 			}
 		}
@@ -83,6 +94,49 @@ bot_combat_think(damage, attacker, direction)
 	self bot_combat_main();
 }
 
+bot_patrol_near_enemy(damage, attacker, direction)
+{
+	if(isDefined(attacker))
+	{
+		self bot_lookat_entity(attacker);
+	}
+	
+	if(!isDefined(attacker))
+	{
+		attacker = self bot_get_closest_enemy(self.origin);
+	}
+	
+	if(!isDefined(attacker))
+	{
+		return;
+	}
+	
+	node = bot_nearest_node(attacker.origin);
+	
+	if(!isDefined(node))
+	{
+		nodes = getnodesinradiussorted(attacker.origin, 1024, 0, 512, "Path", 8);
+		
+		if(nodes.size)
+		{
+			node = nodes[0];
+		}
+	}
+	
+	if(isDefined(node))
+	{
+		if(isDefined(damage))
+		{
+			self addgoal(node, 24, 4, "enemy_patrol");
+			return;
+		}
+		else
+		{
+			self addgoal(node, 24, 2, "enemy_patrol");
+		}
+	}
+}
+
 bot_combat_main()
 {
 	if(self bot_should_melee())
@@ -103,7 +157,6 @@ bot_combat_main()
 	
 	weapon = self getcurrentweapon();
 	
-	// Force bot to finish reloading until clip is full
 	if(self isreloading())
 	{
 		clip = self getweaponammoclip(weapon);
@@ -125,7 +178,11 @@ bot_combat_main()
 	
 	ads = 0;
 	
-	if(!self bot_should_hip_fire() && self.bot.threat.dot > 0.85)
+	time = gettime();
+	
+	panicking = is_true(self.bot.is_panicking);
+	
+	if(!panicking && !self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
 	{
 		ads = 1;
 	}
@@ -139,15 +196,13 @@ bot_combat_main()
 		self pressads(0);
 	}
 	
-	time = gettime();
-	
 	frames = 4;
 	
 	if(time >= self.bot.threat.time_aim_correct)
 	{
 		self.bot.threat.time_aim_correct += self.bot.threat.time_aim_interval;
 		
-		frac = (time - self.bot.threat.time_first_sight) / 100;
+		frac = (time - self.bot.threat.time_first_sight) / 50;
 		frac = clamp(frac, 0, 1);
 		
 		if(!threat_is_player())
@@ -166,20 +221,23 @@ bot_combat_main()
 		
 		max = weaponclipsize(weapon);
 
-		// Fail-safe: If the clip is full, or the physical reload was interrupted
 		if(clip >= max || !self isreloading())
 		{
 			self.bot.reload_until_full = undefined;
 		}
 		else
 		{
-			// If still actively reloading and not full, keep blocking attack
 			self allowattack(0);
+			
 			return;
 		}
 	}
 	
-	if(self bot_on_target(self.bot.threat.entity.origin, 100))
+	has_sight = self botsighttracepassed(self.bot.threat.entity);
+	
+	on_target_radius = panicking ? 100 : 70;
+	
+	if(has_sight && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, on_target_radius))
 	{
 		self allowattack(1);
 	}
@@ -194,6 +252,210 @@ bot_combat_main()
 		
 		return;
 	}
+}
+
+bot_leader_kite_update()
+{
+	if(isdefined(self.bot.threat.entity) && isalive(self.bot.threat.entity))
+	{
+		if(self botsighttracepassed(self.bot.threat.entity) && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, 70))
+			return false;
+	}
+	
+	nearby = self bot_count_nearby_zombies(500);
+	
+	if(nearby < 3)
+		return false;
+	
+	if(isdefined(self.bot.next_kite_scan) && gettime() < self.bot.next_kite_scan)
+		return self hasgoal("flee");
+	
+	self.bot.next_kite_scan = gettime() + 600;
+	
+	horde_center = self bot_get_zombie_cluster_center(500);
+	
+	if(!isdefined(horde_center))
+		return false;
+	
+	to_leader = self.origin - horde_center;
+	
+	if(length(to_leader) < 1)
+		to_leader = (1, 0, 0);
+	else
+		to_leader = vectornormalize(to_leader);
+	
+	tangent = (-to_leader[1], to_leader[0], 0);
+	
+	if(!isdefined(self.bot.kite_direction))
+		self.bot.kite_direction = (randomint(2) == 0) ? 1 : -1;
+	
+	if(!isdefined(self.bot.next_kite_flip) || gettime() > self.bot.next_kite_flip)
+	{
+		self.bot.next_kite_flip = gettime() + randomintrange(8000, 16000);
+		
+		if(randomint(100) < 20)
+			self.bot.kite_direction *= -1;
+	}
+	
+	candidate = self.origin + (tangent * 220 * self.bot.kite_direction) + (to_leader * 80);
+	
+	location = get_random_walkable_location(candidate, 150, self);
+	
+	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
+		return false;
+	
+	if(self getgoal("wander") || self hasgoal("wander"))
+		self cancelgoal("wander");
+	
+	self cancelgoal("flee");
+	
+	self addgoal(location, 200, 4, "flee");
+	
+	return true;
+}
+
+bot_maintain_kiting_formation()
+{
+	if(isdefined(self.bot.threat.entity) && isalive(self.bot.threat.entity))
+	{
+		if(self botsighttracepassed(self.bot.threat.entity) && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, 70))
+			return false;
+	}
+	
+	leader = level.bot_train_leader;
+	
+	if(!isdefined(leader) || !isalive(leader))
+		return false;
+	
+	horde_center = self bot_get_zombie_cluster_center(500);
+	
+	if(!isdefined(horde_center))
+		return false;
+	
+	leader_dist = distance(leader.origin, horde_center);
+	
+	self_dist = distance(self.origin, horde_center);
+	
+	if(self_dist >= leader_dist - 50)
+		return false;
+	
+	if(isdefined(self.bot.next_formation_scan) && gettime() < self.bot.next_formation_scan)
+		return self hasgoal("flee");
+	
+	self.bot.next_formation_scan = gettime() + 500;
+	
+	away = self.origin - horde_center;
+	
+	if(length(away) < 1)
+		away = (1, 0, 0);
+	else
+		away = vectornormalize(away);
+	
+	candidate = self.origin + (away * 200);
+	
+	location = get_random_walkable_location(candidate, 130, self);
+	
+	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
+		return false;
+	
+	if(self getgoal("wander") || self hasgoal("wander"))
+		self cancelgoal("wander");
+	
+	self cancelgoal("flee");
+	
+	self addgoal(location, 150, 2, "flee");
+	
+	return true;
+}
+
+bot_update_panic_state()
+{
+	if(!isdefined(self.health) || !isdefined(self.maxhealth) || self.maxhealth <= 0)
+	{
+		self.bot.is_panicking = false;
+		
+		return;
+	}
+	
+	health_frac = self.health / self.maxhealth;
+	
+	nearby_close = self bot_count_nearby_zombies(150);
+	
+	surrounded = self bot_count_nearby_zombies(200) >= 4;
+	
+	self.bot.is_panicking = (health_frac <= 0.3 && nearby_close >= 1) || surrounded;
+}
+
+bot_panic_evade()
+{
+	if(isdefined(self.bot.next_panic_scan) && gettime() < self.bot.next_panic_scan)
+		return self hasgoal("flee");
+	
+	self.bot.next_panic_scan = gettime() + 120;
+	
+	zombies = get_cached_zombies();
+	
+	if(!isdefined(zombies))
+		return false;
+	
+	push = (0, 0, 0);
+	
+	found_any = false;
+	
+	foreach(zombie in zombies)
+	{
+		if(!isalive(zombie))
+			continue;
+		
+		d_sq = distancesquared(self.origin, zombie.origin);
+		
+		if(d_sq > 250000)
+			continue;
+		
+		found_any = true;
+		
+		away = self.origin - zombie.origin;
+		
+		d = sqrt(d_sq);
+		
+		if(d < 1)
+			away = (1, 0, 0);
+		else
+			away = away / d;
+		
+		weight = 1;
+		
+		if(d < 150)
+			weight = 3;
+		else if(d < 300)
+			weight = 1.5;
+		
+		push += away * weight;
+	}
+	
+	if(!found_any)
+		return false;
+	
+	if(length(push) < 0.01)
+		push = (1, 0, 0);
+	else
+		push = vectornormalize(push);
+	
+	candidate = self.origin + (push * 450);
+	
+	location = get_random_walkable_location(candidate, 200, self);
+	
+	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
+		return false;
+	
+	if(self getgoal("wander") || self hasgoal("wander"))
+		self cancelgoal("wander");
+	
+	self cancelgoal("flee");
+	
+	self addgoal(location, 300, 5, "flee");
+	
+	return true;
 }
 
 bot_has_ballistic_knife()
@@ -219,6 +481,9 @@ bot_should_melee()
 	
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
         return false;
+	
+	if(is_true(self.bot.is_panicking))
+		return false;
 	
     threat = self.bot.threat.entity;
 	
@@ -261,17 +526,17 @@ bot_combat_melee()
 
     self pressmelee();
 
-    wait 0.5; // Covers the swing animation so it doesn't spam the button every tick
+    wait 0.5;
 
     self.bot.is_meleeing = undefined;
 }
 
 bot_should_throw_grenade()
 {
-	if(level.round_number < 2)
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
 		return false;
 	
-	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+	if(isdefined(level.round_number) && level.round_number <= 2)
 		return false;
 	
     if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
@@ -302,7 +567,6 @@ bot_should_throw_grenade()
 	
     throw_dist_sq = distancesquared(self.origin, threat.origin);
 	
-    // Don't throw if is too far
     if(throw_dist_sq > 1440000)
         return false;
 	
@@ -321,8 +585,20 @@ bot_should_throw_grenade()
             cluster_count++;
     }
 	
-    if(cluster_count < 5)
+	round_number = isdefined(level.round_number) ? level.round_number : 3;
+	
+	required_cluster = 6 + int(round_number / 5);
+	
+    if(cluster_count < required_cluster)
         return false;
+	
+	throw_chance = 35 - min(round_number, 27);
+	
+	if(throw_chance < 8)
+		throw_chance = 8;
+	
+	if(randomint(100) >= throw_chance)
+		return false;
 	
     return true;
 }
@@ -337,7 +613,9 @@ bot_combat_throw_grenade()
 	
     self.bot.is_throwing_grenade = true;
 	
-    self.bot.next_grenade_throw = gettime() + 250;
+	round_number = isdefined(level.round_number) ? level.round_number : 1;
+	
+    self.bot.next_grenade_throw = gettime() + randomintrange(20000, 32000) + (round_number * 500);
 	
     primaries = self getweaponslistprimaries();
 	
@@ -362,7 +640,6 @@ bot_combat_throw_grenade()
     while(self isswitchingweapons() && gettime() < switch_timeout)
         wait 0.05;
 	
-    // Bail out early if the target died while we were switching weapons
     if(!isdefined(target) || !isalive(target))
     {
 		self switchtoweapon(original_weapon);
@@ -383,7 +660,6 @@ bot_combat_throw_grenade()
 	
     while(!self isthrowinggrenade() && gettime() < throw_start_timeout)
     {
-        // Bail out immediately if the target dies before the throw even starts
         if(!isdefined(target) || !isalive(target))
             break;
 
@@ -434,18 +710,24 @@ bot_should_hip_fire()
 	
 	switch(class)
 	{
+		default:
+			distcheck = 200;
+			break;
+		
 		case "rocketlauncher":
 			distcheck = 0;
 			break;
 		
-		default:
-		case "mg":
-		case "rifle":
-			distcheck = 200;
-			break;
-		
 		case "spread":
 			distcheck = 250;
+			break;
+		
+		case "mg":
+			distcheck = 150;
+			break;
+		
+		case "rifle":
+			distcheck = 200;
 			break;
 		
 		case "smg":
@@ -503,14 +785,13 @@ bot_update_aim(frames)
 {
 	ent = self.bot.threat.entity;
 
-	if(!isdefined(ent))
+	if(!isdefined(ent.origin))
 		return self.origin;
 
 	distsq = distancesquared(self.origin, ent.origin);
 	
 	dist = sqrt(distsq);
 
-	// Scale prediction based on distance
 	if(dist > 1200) 
 		frames = 12;
 	else if(dist > 800) 
@@ -522,7 +803,6 @@ bot_update_aim(frames)
 
 	prediction = self predictposition(ent, frames);
 	
-	// Forward compensation
 	vel = ent getvelocity();
 	
 	prediction += vel * 0.07;
@@ -535,15 +815,14 @@ bot_update_aim(frames)
 		
 		aim_offset = 5;
 
-		// Distance correction
-		if (dist > 800)
+		if(dist > 800)
 			aim_offset -= 5;
-		else if (dist < 400)
+		else if(dist < 400)
 			aim_offset += 15;
 
 		return prediction + (0, 0, height + aim_offset);
 	}
-	
+
 	height = ent getplayerviewheight();
 	
 	return prediction + (0, 0, height);
@@ -590,6 +869,11 @@ bot_can_do_combat()
 		return 0;
 	}
 	
+	if(is_true(self.bot.is_getting_shield))
+	{
+		return 0;
+	}
+	
 	if(is_true(self.bot.is_using_box))
 	{
 		return 0;
@@ -632,36 +916,86 @@ bot_has_enemy()
 
 bot_best_enemy()
 {
-    enemies = get_cached_zombies(); // Use cached array
-    enemies = arraysort(enemies, self.origin);
+    enemies = get_cached_zombies();
     
-    i = 0;
-    
-    while(i < enemies.size)
+    if(!isdefined(enemies) || enemies.size == 0)
     {
-        if(threat_should_ignore(enemies[i]))
-        {
-            i++;
-            continue;
-        }
-        
-        wallshoot_range = getdvarfloatdefault("bot_wallshoot_dist", 40000);
-        
-        if(self botsighttracepassed(enemies[i]) || distancesquared(self.origin, enemies[i].origin) <= wallshoot_range)
-        {
-            self.bot.threat.entity = enemies[i];
-            self.bot.threat.time_first_sight = gettime();
-            self.bot.threat.time_recent_sight = gettime();
-            self.bot.threat.dot = bot_dot_product(enemies[i].origin);
-            self.bot.threat.position = enemies[i].origin;
-            
-            return 1;
-        }
-        
-        i++;
+        self bot_expire_stale_threat();
+		
+        return 0;
     }
     
-    return 0;
+    wallshoot_range = getdvarfloatdefault("bot_wallshoot_dist", 200);
+    
+    revive_point = undefined;
+    
+    if(maps\mp\zombies\_zm_laststand::player_any_player_in_laststand())
+        revive_point = self get_active_revive_point();
+    
+    best = undefined;
+	
+    best_score = -999999999;
+    
+    foreach(zombie in enemies)
+    {
+        if(threat_should_ignore(zombie))
+            continue;
+        
+        dist = distance(self.origin, zombie.origin);
+        
+        if(!self botsighttracepassed(zombie) && dist > wallshoot_range)
+            continue;
+        
+        score = 2000 - dist;
+        
+        if(dist < 100)
+            score += 500;
+        
+        if(isdefined(revive_point))
+        {
+            dist_to_downed = distance(zombie.origin, revive_point.origin);
+            
+            if(dist_to_downed < 400)
+                score += 600;
+            else if(dist_to_downed < 800)
+                score += 250;
+        }
+        
+        if(score > best_score)
+        {
+            best_score = score;
+			
+            best = zombie;
+        }
+    }
+    
+    if(!isdefined(best))
+    {
+        self bot_expire_stale_threat();
+		
+        return 0;
+    }
+    
+    self.bot.threat.entity = best;
+    self.bot.threat.time_first_sight = gettime();
+    self.bot.threat.time_recent_sight = gettime();
+    self.bot.threat.dot = bot_dot_product(best.origin);
+    self.bot.threat.position = best.origin;
+    
+    return 1;
+}
+
+bot_expire_stale_threat()
+{
+    if(!isdefined(self.bot.threat.entity))
+        return;
+    
+    memory_window = 350;
+    
+    if(isdefined(self.bot.threat.time_recent_sight) && gettime() - self.bot.threat.time_recent_sight <= memory_window)
+        return;
+    
+    self bot_clear_enemy();
 }
 
 threat_should_ignore(entity)
