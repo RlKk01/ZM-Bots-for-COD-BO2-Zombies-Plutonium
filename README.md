@@ -22,12 +22,12 @@ The most relevant characteristics that these bots have are:
 
 * Bots will revive other players, just as a real player would.
 
-* They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
-
-* Bots can be commanded using the "follow", "stay" or "wander" commands, by pressing the "2" key on the keyboard or, if using a controller, by pressing the down arrow on the directional pad.
-
 * Bots will get the shield if the player has it.
 
 * Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
 
-* Bots will throw grenades at the zombies if there is a group of 5 of them within an small radius.
+* Bots will throw grenades at the zombies if there is a group of them within an small radius.
+
+* Bots can be commanded using the "follow", "stay" or "wander" commands, by pressing the "2" key on the keyboard or, if using a controller, by pressing the down arrow on the directional pad.
+
+* They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
