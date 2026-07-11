@@ -1603,7 +1603,7 @@ bot_force_door_nearby()
     
     closest = undefined;
 	
-    closestDistSq = 160000;
+    closestDistSq = 90000;
     
     foreach(door in doors)
     {
@@ -1686,7 +1686,7 @@ bot_buy_door()
     
     closestdoor = undefined;
 	
-    closestdistsq = 250000;
+    closestdistsq = 90000;
 	
     foreach(door in doors)
     {
@@ -2639,11 +2639,12 @@ bot_command_mode_monitor()
 {
     self endon("disconnect");
     self endon("death");
+	
     level endon("end_game");
 
-    self.combo_last_use = 0;
-
     self notifyonplayercommand("command_pressed", "+actionslot 2");
+
+    last_press_time = 0;
 
     for(;;)
     {
@@ -2651,12 +2652,18 @@ bot_command_mode_monitor()
 
         current_time = gettime();
 
-        if(current_time - self.combo_last_use < 1000)
-            continue;
+        if(current_time - last_press_time < 500)
+        {
+            self bot_cycle_command_mode();
 
-        self.combo_last_use = current_time;
-		
-        self bot_cycle_command_mode();
+            last_press_time = 0;
+
+            wait 1;
+        }
+        else
+        {
+            last_press_time = current_time;
+        }
     }
 }
 
