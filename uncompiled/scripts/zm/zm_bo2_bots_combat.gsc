@@ -1,7 +1,5 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
-#include maps\mp\zombies\_zm_utility;
-#include maps\mp\zombies\_zm_weapons;
 #include maps\mp\zombies\_zm_laststand;
 
 #include scripts\zm\zm_bo2_bots;
@@ -55,7 +53,7 @@ bot_combat_think(damage, attacker, direction)
 				else
 					self.bot.next_flee_scan = gettime() + 1500;
 				
-				location = get_random_walkable_location(self.origin, 600, self);
+				location = get_random_walkable_location(self.origin, 800, self);
 				
 				if(!self hasgoal("flee") && isdefined(location) && location != self.origin)
 				{
@@ -234,11 +232,7 @@ bot_combat_main()
 		}
 	}
 	
-	has_sight = self botsighttracepassed(self.bot.threat.entity);
-	
-	on_target_radius = panicking ? 100 : 70;
-	
-	if(has_sight && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, on_target_radius))
+	if(self bot_on_target(self.bot.threat.entity.origin, 100))
 	{
 		self allowattack(1);
 	}
@@ -257,12 +251,6 @@ bot_combat_main()
 
 bot_leader_kite_update()
 {
-	if(isdefined(self.bot.threat.entity) && isalive(self.bot.threat.entity))
-	{
-		if(self botsighttracepassed(self.bot.threat.entity) && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, 70))
-			return false;
-	}
-	
 	nearby = self bot_count_nearby_zombies(500);
 	
 	if(nearby < 3)
@@ -317,12 +305,6 @@ bot_leader_kite_update()
 
 bot_maintain_kiting_formation()
 {
-	if(isdefined(self.bot.threat.entity) && isalive(self.bot.threat.entity))
-	{
-		if(self botsighttracepassed(self.bot.threat.entity) && isdefined(self.bot.threat.aim_target) && self bot_on_target(self.bot.threat.aim_target, 70))
-			return false;
-	}
-	
 	leader = level.bot_train_leader;
 	
 	if(!isdefined(leader) || !isalive(leader))
@@ -568,10 +550,10 @@ bot_should_throw_grenade()
 	
     throw_dist_sq = distancesquared(self.origin, threat.origin);
 	
-    if(throw_dist_sq > 1440000)
+    if(throw_dist_sq > 1000000)
         return false;
 	
-    cluster_radius_sq = 250000;
+    cluster_radius_sq = 1000000;
 	
     cluster_count = 0;
 	
@@ -636,7 +618,7 @@ bot_combat_throw_grenade()
     else if(has_sticky)
         self switchtoweapon("sticky_grenade_zm");
 	
-    switch_timeout = gettime() + 1000;
+    switch_timeout = gettime() + 1500;
 	
     while(self isswitchingweapons() && gettime() < switch_timeout)
         wait 0.05;
@@ -711,24 +693,18 @@ bot_should_hip_fire()
 	
 	switch(class)
 	{
-		default:
-			distcheck = 200;
-			break;
-		
 		case "rocketlauncher":
 			distcheck = 0;
 			break;
 		
-		case "spread":
-			distcheck = 250;
-			break;
-		
+		default:
 		case "mg":
-			distcheck = 150;
-			break;
-		
 		case "rifle":
 			distcheck = 200;
+			break;
+		
+		case "spread":
+			distcheck = 250;
 			break;
 		
 		case "smg":
@@ -742,7 +718,7 @@ bot_should_hip_fire()
 	
 	if(isweaponscopeoverlay(weapon))
 	{
-		distcheck = 500;
+		distcheck = 400;
 	}
 	
 	return distsq < (distcheck * distcheck);
@@ -820,7 +796,7 @@ bot_update_aim(frames)
 			aim_offset -= 5;
 		else if(dist < 400)
 			aim_offset += 15;
-
+		
 		return prediction + (0, 0, height + aim_offset);
 	}
 

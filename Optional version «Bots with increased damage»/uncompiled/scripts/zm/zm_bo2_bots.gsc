@@ -836,44 +836,9 @@ bot_get_weapon_score(weapon)
     }
 }
 
-bot_should_visit_box()
-{
-	weapons = self getweaponslistprimaries();
-	
-	if(!isdefined(weapons) || weapons.size == 0)
-		return true;
-	
-	weapon_score = 999;
-	
-	all_wonder_or_top = true;
-	
-	foreach(weap in weapons)
-	{
-		s = bot_get_weapon_score(weap);
-		
-		if(s < weapon_score)
-			weapon_score = s;
-		
-		if(s < 95)
-			all_wonder_or_top = false;
-	}
-	
-	if(all_wonder_or_top)
-		return false;
-	
-	if(weapons.size < 2 || (self hasperk("specialty_additionalprimaryweapon") && weapons.size < 3))
-		return weapon_score < 90;
-	
-	return weapon_score < 75;
-}
-
 bot_buy_box()
 {
-	needs_weapon_urgently = bot_get_weapon_score(self getcurrentweapon()) <= 0;
-	
-	box_cushion = needs_weapon_urgently ? 950 : 1200;
-	
-    if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < box_cushion || !self bot_should_visit_box())
+	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand() || self.score < 950)
     {
         if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
             self cancelgoal("boxbuy");
@@ -882,9 +847,6 @@ bot_buy_box()
     }
 	
 	if(isdefined(self.bot.last_box_interaction_time) && (gettime() - self.bot.last_box_interaction_time < self.bot.box_cooldown_duration))
-		return;
-	
-	if(isdefined(level.bot_last_team_box_use) && gettime() - level.bot_last_team_box_use < 20000)
 		return;
     
     if(is_true(self.bot.waiting_for_box_animation))
@@ -993,7 +955,6 @@ bot_buy_box()
             self.bot.is_using_box = true;
 			current_box.chest_user = self;
             level.box_in_use_by_bot = self;
-			level.bot_last_team_box_use = gettime();
 			
 			self allowattack(0);
 			self pressads(0);
@@ -1143,32 +1104,6 @@ bot_monitor_box_animation(box)
         }
     }
     
-    if(!isdefined(box_weapon))
-    {
-        received_weapon = self getcurrentweapon();
-        
-        new_weapons = self getweaponslistprimaries();
-        
-        if(isdefined(new_weapons))
-        {
-            foreach(weap in new_weapons)
-            {
-                if(weap != worst_weapon && !array_contains(weapons, weap))
-                {
-                    received_weapon = weap;
-					
-                    break;
-                }
-            }
-        }
-        
-        self.bot.last_box_weapon_score = bot_get_weapon_score(received_weapon);
-    }
-    else
-    {
-        self.bot.last_box_weapon_score = bot_get_weapon_score(box_weapon);
-    }
-    
 	self.bot.last_box_interaction_time = gettime();
 	
 	if(level.round_number <= 8)
@@ -1177,9 +1112,6 @@ bot_monitor_box_animation(box)
 		self.bot.box_cooldown_duration = randomintrange(240000, 450000);
 	else
 		self.bot.box_cooldown_duration = randomintrange(480000, 900000);
-	
-	if(isdefined(self.bot.last_box_weapon_score) && self.bot.last_box_weapon_score < 75)
-		self.bot.box_cooldown_duration = int(self.bot.box_cooldown_duration / 2);
 	
 	self clearlookat();
 	
@@ -1195,24 +1127,24 @@ bot_monitor_box_animation(box)
     self notify("box_usage_complete");
 }
 
-bot_box_cleanup_watcher(zm_bot, box)
+bot_box_cleanup_watcher(zm_bots, box)
 {
-	zm_bot endon("disconnect");
+	zm_bots endon("disconnect");
 	
 	level endon("end_game");
 	
-    zm_bot endon("box_usage_complete");
+    zm_bots endon("box_usage_complete");
 	
-    zm_bot waittill("death");
+    zm_bots waittill("death");
 	
-	zm_bot.bot.waiting_for_box_animation = undefined;
-	zm_bot.bot.current_box = undefined;
-    zm_bot.bot.is_using_box = undefined;
+	zm_bots.bot.waiting_for_box_animation = undefined;
+	zm_bots.bot.current_box = undefined;
+    zm_bots.bot.is_using_box = undefined;
 	
-    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zm_bot)
+    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zm_bots)
         box.chest_user = undefined;
 	
-    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zm_bot)
+    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zm_bots)
         level.box_in_use_by_bot = undefined;
 }
 
@@ -1230,19 +1162,11 @@ bot_should_take_weapon(boxweapon, currentweapon)
         return false;
     }
     
-    if(score_current >= 90)
-    {
-        if(isdefined(boxweapon) && bot_get_weapon_score(boxweapon) >= 90 && self.score >= 1200)
-            return true;
-        
-        return false;
-    }
-
     if(!isdefined(boxweapon))
     {
         if(score_current >= 90)
             return false;
-            
+        
         return true;
     }
 	
@@ -1308,7 +1232,7 @@ bot_buy_wallbuy()
 	
 	foreach(wallbuy in wallbuys)
 	{
-		if(distancesquared(wallbuy.origin, self.origin) < 250000 && 
+		if(distancesquared(wallbuy.origin, self.origin) < 1000000 && 
 		   wallbuy.trigger_stub.cost != 500 && 
 		   wallbuy.trigger_stub.cost <= self.score && 
 		   bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
@@ -1343,53 +1267,7 @@ bot_buy_wallbuy()
 	if(isdefined(self.bot.wallbuy_nav_expiry) && gettime() < self.bot.wallbuy_nav_expiry)
 		return;
 	
-	if(bot_get_weapon_score(weapon) >= 50)
-	{
-		door_reserve = bot_get_nearest_door_cost();
-		
-		if(isdefined(door_reserve) && self.score - weapontobuy.trigger_stub.cost < door_reserve)
-			return;
-	}
-	
 	self thread bot_navigate_and_buy_wallbuy(weapontobuy);
-}
-
-bot_get_nearest_door_cost()
-{
-	doors = get_cached_doors();
-	
-	if(!isdefined(doors))
-		return undefined;
-	
-	best = undefined;
-	
-	best_dist_sq = 999999999;
-	
-	foreach(door in doors)
-	{
-		if(!isdefined(door) || !isdefined(door.origin) || !isdefined(door.zombie_cost) || door.zombie_cost <= 0)
-			continue;
-		
-		if(isdefined(door._door_open) && door._door_open)
-			continue;
-		
-		if(isdefined(door.has_been_opened) && door.has_been_opened)
-			continue;
-		
-		d = distancesquared(self.origin, door.origin);
-		
-		if(d >= best_dist_sq)
-			continue;
-		
-		if(!findpath(self.origin, door.origin, undefined, 0, 1))
-			continue;
-		
-		best_dist_sq = d;
-		
-		best = door.zombie_cost;
-	}
-	
-	return best;
 }
 
 bot_navigate_and_buy_wallbuy(weapontobuy)
@@ -2409,55 +2287,6 @@ bot_simulate_self_revive(corpse)
     self clearlookat();
 }
 
-bot_get_hunt_target()
-{
-	zombies = get_cached_zombies();
-	
-	if(!isdefined(zombies) || zombies.size == 0)
-		return undefined;
-	
-	alive_count = 0;
-	
-	foreach(zombie in zombies)
-	{
-		if(isalive(zombie))
-			alive_count++;
-	}
-	
-	if(alive_count == 0)
-		return undefined;
-	
-	nearest = undefined;
-	
-	if(alive_count <= 3)
-		nearest_dist_sq = 999999999;
-	else
-		nearest_dist_sq = 16000000;
-	
-	foreach(zombie in zombies)
-	{
-		if(!isalive(zombie))
-			continue;
-		
-		d = distancesquared(self.origin, zombie.origin);
-		
-		if(d < nearest_dist_sq)
-		{
-			nearest_dist_sq = d;
-			
-			nearest = zombie;
-		}
-	}
-	
-	if(!isdefined(nearest))
-		return undefined;
-	
-	if(!findpath(self.origin, nearest.origin, undefined, 0, 1))
-		return undefined;
-	
-	return nearest.origin;
-}
-
 bot_update_wander()
 {
 	self endon("disconnect");
@@ -2574,32 +2403,6 @@ bot_update_wander()
 			self.bot.guard_target = undefined;
 			
 			self.bot.guard_offset = undefined;
-		}
-		
-		if(!self bot_has_enemy())
-		{
-			if(!isdefined(self.bot.next_hunt_scan) || gettime() >= self.bot.next_hunt_scan)
-			{
-				self.bot.next_hunt_scan = gettime() + 750;
-				
-				self.bot.hunt_target = self bot_get_hunt_target();
-			}
-			
-			if(isdefined(self.bot.hunt_target))
-			{
-				if(!self hasgoal("wander") || distancesquared(self getgoal("wander"), self.bot.hunt_target) > 250000)
-				{
-					self cancelgoal("wander");
-					
-					self addgoal(self.bot.hunt_target, 100, 2, "wander");
-				}
-				
-				self.bot.is_following = false;
-				
-				wait 0.05;
-				
-				continue;
-			}
 		}
 		
 		player = undefined;
@@ -3148,7 +2951,11 @@ bot_weapon_switch_think()
 		}
 
         if(isdefined(self.bot.next_weapon_switch) && gettime() < self.bot.next_weapon_switch)
-            continue;
+		{
+			wait 0.05;
+			
+			continue;
+		}
 
         primaries = self getweaponslistprimaries();
 
@@ -3176,10 +2983,8 @@ bot_weapon_switch_think()
 
 bot_switch_weapon(current_weapon, primaries)
 {
-    decent = [];
-	
-    weak = [];
-    
+    candidates = [];
+
     foreach(weapon in primaries)
     {
         if(weapon == current_weapon)
@@ -3188,24 +2993,17 @@ bot_switch_weapon(current_weapon, primaries)
         clip = self getweaponammoclip(weapon);
 		
         stock = self getweaponammostock(weapon);
-		
+
         if(!clip && !stock)
             continue;
 
-        score = bot_get_weapon_score(weapon);
-		
-        if(score >= 50)
-            decent[decent.size] = weapon;
-        else
-            weak[weak.size] = weapon;
+        candidates[candidates.size] = weapon;
     }
-    
-    if(decent.size > 0)
-        return decent[randomint(decent.size)];
-    else if(weak.size > 0)
-        return weak[randomint(weak.size)];
-    
-    return undefined;
+
+    if(!isdefined(candidates) || candidates.size == 0)
+        return undefined;
+
+    return candidates[randomint(candidates.size)];
 }
 
 bot_weapon_failsafe_monitor()
