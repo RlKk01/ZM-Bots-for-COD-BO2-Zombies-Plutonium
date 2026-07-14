@@ -267,6 +267,8 @@ init()
 	for(i = 0; i < bot_amount; i++)
 		spawn_bot();
 	
+	level thread bot_health_regen();
+	
     foreach(player in get_players())
     {
         if(!isdefined(player.pers["isbot"]))
@@ -312,6 +314,7 @@ onspawn()
 		self notify("bot_relife");
 		
 		self thread bot_spawn();
+		self thread bot_health();
 		self thread bot_set_perks();
 	}
 }
@@ -336,6 +339,54 @@ bot_spawn()
 	self thread bot_weapon_failsafe_monitor();
 }
 
+bot_health()
+{
+	self endon("disconnect");
+	self endon("bot_relife");
+	self endon("death");
+	
+	level endon("end_game");
+	
+	wait 1;
+	
+	while(1)
+	{
+		max_health = 1500;
+		
+		self setnormalhealth(max_health);
+		self setmaxhealth(max_health);
+		
+		self waittill("player_revived");
+	}
+}
+
+bot_health_regen()
+{
+	level endon("end_game");
+	
+	for(;;)
+	{
+		players = getplayers();
+		
+		for(i = 0; i < players.size; i++)
+		{
+			if(!isdefined(players[i]) || !isalive(players[i]))
+				continue;
+			
+			if(!isdefined(players[i].pers["isbot"]))
+				continue;
+			
+            if(players[i].health < 1500)
+                players[i].health += 50;
+			
+            if(players[i].health > 1500)
+                players[i].health = 1500;
+		}
+		
+		wait 1;
+	}
+}
+
 bot_set_perks()
 {
 	self endon("disconnect");
@@ -344,33 +395,10 @@ bot_set_perks()
 	
 	level endon("end_game");
 	
-	self.bot.is_on_survival_gamemode = (getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival");
-	
 	wait 1;
 	
 	while(1)
 	{
-		bot_count = 0;
-		
-		players = get_players();
-		
-		foreach(player in players)
-		{
-			if(isdefined(player.pers["isbot"]))
-				bot_count++;
-		}
-		
-		if(self.bot.is_on_survival_gamemode || bot_count > 4)
-		{
-			self setnormalhealth(1500);
-			self setmaxhealth(1500);
-		}
-		else
-		{
-			self setnormalhealth(3000);
-			self setmaxhealth(3000);
-		}
-		
 		self setperk("specialty_rof");
 		self setperk("specialty_deadshot");
 		self setperk("specialty_flakjacket");
@@ -2486,7 +2514,10 @@ bot_update_wander()
 				
 				if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 				{
-					location = get_random_walkable_location(self.origin, 800, self);
+					if(level.round_number <= 5)
+						location = get_random_walkable_location(self.origin, 800, self);
+					else
+						location = get_random_walkable_location(self.origin, 3000, self);
 					
 					if(isdefined(location))
 					{
@@ -2687,6 +2718,7 @@ bot_cycle_command_mode()
 bot_shield_sync_think()
 {
 	self endon("disconnect");
+	self endon("bot_relife");
 	self endon("death");
 	
 	level endon("end_game");
