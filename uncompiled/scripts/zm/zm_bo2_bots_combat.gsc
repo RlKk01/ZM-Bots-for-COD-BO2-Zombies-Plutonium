@@ -53,14 +53,14 @@ bot_combat_think(damage, attacker, direction)
 				else
 					self.bot.next_flee_scan = gettime() + 1500;
 				
-				location = get_random_walkable_location(self.origin, 800, self);
+				location = get_random_walkable_location(self.origin, 3000, self);
 				
 				if(!self hasgoal("flee") && isdefined(location) && location != self.origin)
 				{
 					if(self getgoal("wander") || self hasgoal("wander"))
 						self cancelgoal("wander");
 					
-					self addgoal(location, 256, 4, "flee");
+					self addgoal(location, 1000, 4, "flee");
 				}
 			}
 		}
