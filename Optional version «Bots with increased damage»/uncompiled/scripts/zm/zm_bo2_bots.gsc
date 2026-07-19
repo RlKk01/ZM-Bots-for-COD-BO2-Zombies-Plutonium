@@ -322,7 +322,7 @@ onspawn()
 bot_cleanup_on_disconnect()
 {
     self waittill("disconnect");
-    
+	
     if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == self)
     {
         level.box_in_use_by_bot = undefined;
@@ -545,7 +545,7 @@ bot_set_dvars()
 	setdvar("bot_minstrafetime", "3000");
 	setdvar("bot_maxstrafetime", "6000");
 	setdvar("scr_help_dist", "512");
-	setdvar("bot_allowgrenades", "1");
+	setdvar("bot_allowgrenades", "0");
 	setdvar("bot_meleedist", "70");
 	setdvar("bot_yawspeed", "4");
 	setdvar("bot_sprintdistance", "256");
@@ -1029,6 +1029,9 @@ bot_monitor_box_animation(box)
 
     if(!isdefined(box) || self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
+		if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == self)
+			box.chest_user = undefined;
+		
         self.bot.current_box = undefined;
         self.bot.is_using_box = undefined;
 		
@@ -1047,6 +1050,9 @@ bot_monitor_box_animation(box)
             
         if(!array_contains(level.mystery_box_teddy_locations, box.origin))
             level.mystery_box_teddy_locations[level.mystery_box_teddy_locations.size] = box.origin;
+		
+		if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == self)
+			box.chest_user = undefined;
             
         self.bot.current_box = undefined;
         self.bot.is_using_box = undefined;
@@ -1157,13 +1163,11 @@ bot_monitor_box_animation(box)
 
 bot_box_cleanup_watcher(zm_bots, box)
 {
-	zm_bots endon("disconnect");
-	
 	level endon("end_game");
 	
     zm_bots endon("box_usage_complete");
 	
-    zm_bots waittill("death");
+    zm_bots waittill_any("death", "disconnect");
 	
 	zm_bots.bot.waiting_for_box_animation = undefined;
 	zm_bots.bot.current_box = undefined;
