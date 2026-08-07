@@ -809,8 +809,10 @@ bot_get_weapon_score(weapon)
 		
 	if(issubstr(weapon, "minigun") || 
 	   issubstr(weapon, "titus") || 
+	   
+	   issubstr(weapon, "c96_upgraded") || 
 	   issubstr(weapon, "m1911_upgraded") || 
-	   issubstr(weapon, "c96_upgraded"))
+	   issubstr(weapon, "fnp45_upgraded"))
 	   
 	   return 99;
 	
@@ -1590,9 +1592,9 @@ bot_buy_perks()
 				
 				if(getdvar("mapname") == "zm_nuked")
 				{
-					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_movefaster");
+					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_additionalprimaryweapon");
 					
-					costs = array(1500, 3000, 2000, 2000, 2500);
+					costs = array(1500, 3000, 2000, 4000);
 				}
 				
 				if(getdvar("mapname") == "zm_prison")
