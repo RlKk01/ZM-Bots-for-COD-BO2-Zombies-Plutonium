@@ -289,7 +289,7 @@ bot_leader_kite_update()
 	
 	candidate = self.origin + (tangent * 220 * self.bot.kite_direction) + (to_leader * 80);
 	
-	location = get_random_walkable_location(candidate, 150, self);
+	location = get_random_walkable_location(candidate, 1000, self);
 	
 	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
 		return false;
@@ -299,7 +299,7 @@ bot_leader_kite_update()
 	
 	self cancelgoal("flee");
 	
-	self addgoal(location, 200, 4, "flee");
+	self addgoal(location, 1000, 4, "flee");
 	
 	return true;
 }
@@ -337,7 +337,7 @@ bot_maintain_kiting_formation()
 	
 	candidate = self.origin + (away * 200);
 	
-	location = get_random_walkable_location(candidate, 130, self);
+	location = get_random_walkable_location(candidate, 1000, self);
 	
 	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
 		return false;
@@ -347,7 +347,7 @@ bot_maintain_kiting_formation()
 	
 	self cancelgoal("flee");
 	
-	self addgoal(location, 150, 2, "flee");
+	self addgoal(location, 1000, 2, "flee");
 	
 	return true;
 }
@@ -427,7 +427,7 @@ bot_panic_evade()
 	
 	candidate = self.origin + (push * 450);
 	
-	location = get_random_walkable_location(candidate, 200, self);
+	location = get_random_walkable_location(candidate, 1000, self);
 	
 	if(!isdefined(location) || !findpath(self.origin, location, undefined, 0, 1))
 		return false;
@@ -437,7 +437,7 @@ bot_panic_evade()
 	
 	self cancelgoal("flee");
 	
-	self addgoal(location, 300, 5, "flee");
+	self addgoal(location, 1000, 5, "flee");
 	
 	return true;
 }
@@ -481,6 +481,9 @@ bot_should_melee()
 	
     if(!level.zombie_vars[self.team]["zombie_powerup_insta_kill_on"] && !self bot_has_ballistic_knife() && threat.health > knife_damage)
         return false;
+	
+	if(isdefined(self.animname) && (self.animname == "brutus_zm" || self.animname == "panzer_zm"))
+		return false;
 	
     melee_range = getdvarfloatdefault("bot_meleedist", 70);
 	
@@ -551,7 +554,7 @@ bot_should_throw_grenade()
 	
     throw_dist_sq = distancesquared(self.origin, threat.origin);
 	
-    if(throw_dist_sq > 1000000)
+    if(throw_dist_sq < 160000 || throw_dist_sq > 1000000)
         return false;
 	
     cluster_radius_sq = 1000000;
