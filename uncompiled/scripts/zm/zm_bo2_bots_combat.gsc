@@ -479,11 +479,15 @@ bot_should_melee()
 	
     knife_damage = getdvarintdefault("bot_knife_kill_threshold", 150);
 	
-    if(!level.zombie_vars[self.team]["zombie_powerup_insta_kill_on"] && !self bot_has_ballistic_knife() && threat.health > knife_damage)
-        return false;
+    insta_kill_on = level.zombie_vars[self.team]["zombie_powerup_insta_kill_on"];
 	
-	if(isdefined(self.animname) && (self.animname == "brutus_zm" || self.animname == "panzer_zm"))
-		return false;
+    has_ballistic_knife = self bot_has_ballistic_knife();
+	
+    if(!insta_kill_on && !has_ballistic_knife && threat.health > knife_damage)
+        return false;
+
+    if(isdefined(self.animname) && (self.animname == "brutus_zm" || self.animname == "panzer_zm") && insta_kill_on)
+        return false;
 	
     melee_range = getdvarfloatdefault("bot_meleedist", 70);
 	
