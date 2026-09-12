@@ -1263,6 +1263,13 @@ bot_buy_wallbuy()
 		return;
 	}
 	
+	if(self.score < 1250)
+	{
+		self cancelgoal("weaponbuy");
+		
+		return;
+	}
+	
 	weapon = self getcurrentweapon();
 	
 	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
@@ -1289,7 +1296,6 @@ bot_buy_wallbuy()
 	foreach(wallbuy in wallbuys)
 	{
 		if(distancesquared(wallbuy.origin, self.origin) < 1000000 && 
-		   wallbuy.trigger_stub.cost != 500 && 
 		   wallbuy.trigger_stub.cost <= self.score && 
 		   bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
 		   findpath(self.origin, wallbuy.origin, undefined, 0, 1) && 
@@ -2355,263 +2361,6 @@ bot_simulate_self_revive(corpse)
     self clearlookat();
 }
 
-bot_update_wander()
-{
-	self endon("disconnect");
-	self endon("bot_relife");
-	self endon("death");
-	
-	level endon("end_game");
-	
-	for(;;)
-	{
-		wait 0.1;
-		
-		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-		{
-			if(self getgoal("wander") || self hasgoal("wander"))
-				self cancelgoal("wander");
-			
-			wait 0.05;
-			
-			continue;
-		}
-		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
-		{
-			if(self getgoal("wander") || self hasgoal("wander"))
-				self cancelgoal("wander");
-			
-			wait 0.05;
-			
-			continue;
-		}
-		
-		if(self getgoal("flee") || self hasgoal("flee"))
-		{
-			if(self getgoal("wander") || self hasgoal("wander"))
-				self cancelgoal("wander");
-			
-			wait 0.05;
-			
-			continue;
-		}
-		
-		if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
-		{
-			if(self getgoal("wander") || self hasgoal("wander"))
-				self cancelgoal("wander");
-			
-			wait 0.05;
-			
-			continue;
-		}
-		
-		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
-		{
-			if(level.bot_command_mode == "stay" && isdefined(level.bot_commander) && isalive(level.bot_commander))
-			{
-				if(self getgoal("wander") || self hasgoal("wander"))
-					self cancelgoal("wander");
-				
-				wait 0.05;
-				
-				continue;
-			}
-		}
-		
-		downed = self get_active_revive_point();
-		
-		is_revive_claimer = isdefined(self.bot.revive_target) && isdefined(downed) && self.bot.revive_target == downed;
-		
-		if(isdefined(downed) && !is_revive_claimer)
-		{
-			guard_count = isdefined(downed.guard_claimer_count) ? downed.guard_claimer_count : 0;
-			
-			already_guarding_this = isdefined(self.bot.guard_target) && self.bot.guard_target == downed;
-			
-			if((guard_count < 2 || already_guarding_this) && distancesquared(self.origin, downed.origin) < 1000000)
-			{
-				if(!already_guarding_this)
-				{
-					if(isdefined(self.bot.guard_target) && isdefined(self.bot.guard_target.guard_claimer_count) && self.bot.guard_target.guard_claimer_count > 0)
-						self.bot.guard_target.guard_claimer_count--;
-					
-					self.bot.guard_target = downed;
-					
-					downed.guard_claimer_count = guard_count + 1;
-				}
-				
-				if(!isdefined(self.bot.guard_offset) || self.bot.guard_target != downed)
-				{
-					angle = randomfloatrange(0, 360);
-					
-					self.bot.guard_offset = (cos(angle) * 150, sin(angle) * 150, 0);
-				}
-				
-				guard_spot = downed.origin + self.bot.guard_offset;
-				
-				if(!self hasgoal("wander") || distancesquared(self getgoal("wander"), guard_spot) > 40000)
-				{
-					self cancelgoal("wander");
-					
-					self addgoal(guard_spot, 100, 2, "wander");
-				}
-				
-				wait 0.05;
-				
-				continue;
-			}
-		}
-		else if(isdefined(self.bot.guard_target))
-		{
-			if(isdefined(self.bot.guard_target.guard_claimer_count) && self.bot.guard_target.guard_claimer_count > 0)
-				self.bot.guard_target.guard_claimer_count--;
-			
-			self.bot.guard_target = undefined;
-			
-			self.bot.guard_offset = undefined;
-		}
-		
-		player = undefined;
-		
-		foreach(candidate in get_players())
-		{
-			if(!isdefined(candidate) || !isdefined(candidate.origin))
-				continue;
-			
-			if((isdefined(candidate.pers) && isdefined(candidate.pers["isbot"])) || isdefined(candidate.bot))
-				continue;
-			
-			if(!isalive(candidate))
-				continue;
-			
-			player = candidate;
-			
-			break;
-		}
-		
-		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
-		{
-			if(level.bot_command_mode == "follow" && isdefined(level.bot_commander) && isalive(level.bot_commander))
-			{
-				if(isdefined(player))
-				{
-					dist_sq = distancesquared(self.origin, player.origin);
-					
-					if(!isdefined(self.bot.follow_blocked) || gettime() >= self.bot.follow_blocked)
-						self.bot.is_following = true;
-					else
-						self.bot.is_following = false;
-					
-					if(self.bot.is_following)
-					{
-						if(!findpath(self.origin, player.origin, undefined, 0, 1))
-						{
-							self.bot.is_following = false;
-							
-							self.bot.follow_blocked = gettime() + 5000;
-						}
-						else
-							self.bot.is_following = true;
-						
-						self addgoal(player.origin, 100, 1, "wander");
-						
-						if(dist_sq < 22500)
-						{
-							self.bot.is_following = false;
-							
-							self cancelgoal("wander");
-						}
-						
-						wait 0.05;
-						
-						continue;
-					}
-				}
-			}
-		}
-		
-		if(isdefined(level.bot_command_mode) && level.bot_command_mode == "wander")
-		{
-			if(level.bot_command_mode == "wander" && isdefined(level.bot_commander) && isalive(level.bot_commander))
-			{
-				if(!isdefined(self.bot.last_wander_pos))
-				{
-					self.bot.last_wander_pos = self.origin;
-					
-					self.bot.wander_stay_time = gettime();
-				}
-				
-				if(distancesquared(self.origin, self.bot.last_wander_pos) > 256) 
-				{
-					self.bot.last_wander_pos = self.origin;
-					
-					self.bot.wander_stay_time = gettime();
-				}
-				
-				time_at_point = (gettime() - self.bot.wander_stay_time) / 1000;
-				
-				if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
-				{
-					if(level.round_number <= 5)
-						location = get_random_walkable_location(self.origin, 800, self);
-					else
-						location = get_random_walkable_location(self.origin, 3000, self);
-					
-					if(isdefined(location))
-					{
-						self cancelgoal("wander");
-						
-						self addgoal(location, 100, 1, "wander");
-						
-						self.bot.last_wander_pos = self.origin;
-						
-						self.bot.wander_stay_time = gettime();
-					}
-				}
-			}
-		}
-	}
-}
-
-get_random_walkable_location(origin, range, player)
-{
-	tries = 0;
-	
-	min_dist_sq = (range * 0.4) * (range * 0.4);
-	
-	for(;;)
-	{
-		x = origin[0] + randomintrange(range * -1, range);
-		y = origin[1] + randomintrange(range * -1, range);
-		
-		trace_start = (x, y, origin[2] + 500);
-		
-		trace_end = (x, y, origin[2] - 500);
-		
-		ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
-		
-		current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
-		
-		candidate = ground_trace["position"];
-		
-		if(distancesquared(origin, candidate) >= current_min_dist_sq && check_point_in_playable_area(candidate))
-			return candidate;
-		
-		if(tries >= 15)
-		{
-			return origin;
-		}
-		
-		tries ++;
-		
-		wait 0.05;
-	}
-	
-	return origin;
-}
-
 manual_bot_teleport_monitor()
 {
     self endon("disconnect");
@@ -2744,15 +2493,261 @@ bot_cycle_command_mode()
         level.bot_command_mode = "wander";
 
     if(level.bot_command_mode == "wander")
+        level.bot_command_mode = "wander_further";
+    else if(level.bot_command_mode == "wander_further")
         level.bot_command_mode = "follow";
-    else if(level.bot_command_mode == "follow")
-        level.bot_command_mode = "stay";
     else
         level.bot_command_mode = "wander";
-
+	
     level.bot_commander = self;
-
+	
     self iprintlnbold("Bots: " + level.bot_command_mode);
+}
+
+bot_update_wander()
+{
+	self endon("disconnect");
+	self endon("bot_relife");
+	self endon("death");
+	
+	level endon("end_game");
+	
+	for(;;)
+	{
+		wait 0.1;
+		
+		if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+		{
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
+			wait 0.05;
+			
+			continue;
+		}
+		
+        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+		{
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
+			wait 0.05;
+			
+			continue;
+		}
+		
+		if(self getgoal("flee") || self hasgoal("flee"))
+		{
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
+			wait 0.05;
+			
+			continue;
+		}
+		
+		if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
+		{
+			if(self getgoal("wander") || self hasgoal("wander"))
+				self cancelgoal("wander");
+			
+			wait 0.05;
+			
+			continue;
+		}
+		
+		downed = self get_active_revive_point();
+		
+		is_revive_claimer = isdefined(self.bot.revive_target) && isdefined(downed) && self.bot.revive_target == downed;
+		
+		if(isdefined(downed) && !is_revive_claimer)
+		{
+			guard_count = isdefined(downed.guard_claimer_count) ? downed.guard_claimer_count : 0;
+			
+			already_guarding_this = isdefined(self.bot.guard_target) && self.bot.guard_target == downed;
+			
+			if((guard_count < 2 || already_guarding_this) && distancesquared(self.origin, downed.origin) < 1000000)
+			{
+				if(!already_guarding_this)
+				{
+					if(isdefined(self.bot.guard_target) && isdefined(self.bot.guard_target.guard_claimer_count) && self.bot.guard_target.guard_claimer_count > 0)
+						self.bot.guard_target.guard_claimer_count--;
+					
+					self.bot.guard_target = downed;
+					
+					downed.guard_claimer_count = guard_count + 1;
+				}
+				
+				if(!isdefined(self.bot.guard_offset) || self.bot.guard_target != downed)
+				{
+					angle = randomfloatrange(0, 360);
+					
+					self.bot.guard_offset = (cos(angle) * 150, sin(angle) * 150, 0);
+				}
+				
+				guard_spot = downed.origin + self.bot.guard_offset;
+				
+				if(!self hasgoal("wander") || distancesquared(self getgoal("wander"), guard_spot) > 40000)
+				{
+					self cancelgoal("wander");
+					
+					self addgoal(guard_spot, 100, 2, "wander");
+				}
+				
+				wait 0.05;
+				
+				continue;
+			}
+		}
+		else if(isdefined(self.bot.guard_target))
+		{
+			if(isdefined(self.bot.guard_target.guard_claimer_count) && self.bot.guard_target.guard_claimer_count > 0)
+				self.bot.guard_target.guard_claimer_count--;
+			
+			self.bot.guard_target = undefined;
+			
+			self.bot.guard_offset = undefined;
+		}
+		
+		player = undefined;
+		
+		foreach(candidate in get_players())
+		{
+			if(!isdefined(candidate) || !isdefined(candidate.origin))
+				continue;
+			
+			if((isdefined(candidate.pers) && isdefined(candidate.pers["isbot"])) || isdefined(candidate.bot))
+				continue;
+			
+			if(!isalive(candidate))
+				continue;
+			
+			player = candidate;
+			
+			break;
+		}
+		
+		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
+		{
+			if(level.bot_command_mode == "follow" && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			{
+				if(isdefined(player))
+				{
+					dist_sq = distancesquared(self.origin, player.origin);
+					
+					if(!isdefined(self.bot.follow_blocked) || gettime() >= self.bot.follow_blocked)
+						self.bot.is_following = true;
+					else
+						self.bot.is_following = false;
+					
+					if(self.bot.is_following)
+					{
+						if(!findpath(self.origin, player.origin, undefined, 0, 1))
+						{
+							self.bot.is_following = false;
+							
+							self.bot.follow_blocked = gettime() + 5000;
+						}
+						else
+							self.bot.is_following = true;
+						
+						self addgoal(player.origin, 100, 1, "wander");
+						
+						if(dist_sq < 15625)
+						{
+							self.bot.is_following = false;
+							
+							self cancelgoal("wander");
+						}
+						
+						wait 0.05;
+						
+						continue;
+					}
+				}
+			}
+		}
+		
+		if(isdefined(level.bot_command_mode) && (level.bot_command_mode == "wander" || level.bot_command_mode == "wander_further"))
+		{
+			if((level.bot_command_mode == "wander" || level.bot_command_mode == "wander_further") && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			{
+				if(!isdefined(self.bot.last_wander_pos))
+				{
+					self.bot.last_wander_pos = self.origin;
+					
+					self.bot.wander_stay_time = gettime();
+				}
+				
+				if(distancesquared(self.origin, self.bot.last_wander_pos) > 256) 
+				{
+					self.bot.last_wander_pos = self.origin;
+					
+					self.bot.wander_stay_time = gettime();
+				}
+				
+				time_at_point = (gettime() - self.bot.wander_stay_time) / 1000;
+				
+				if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
+				{
+					if(level.bot_command_mode == "wander_further")
+						wander_range = 3000;
+					else
+						wander_range = 600;
+					
+					location = get_random_walkable_location(self.origin, wander_range, self);
+					
+					if(isdefined(location))
+					{
+						self cancelgoal("wander");
+						
+						self addgoal(location, 100, 1, "wander");
+						
+						self.bot.last_wander_pos = self.origin;
+						
+						self.bot.wander_stay_time = gettime();
+					}
+				}
+			}
+		}
+	}
+}
+
+get_random_walkable_location(origin, range, player)
+{
+	tries = 0;
+	
+	min_dist_sq = (range * 0.4) * (range * 0.4);
+	
+	for(;;)
+	{
+		x = origin[0] + randomintrange(range * -1, range);
+		y = origin[1] + randomintrange(range * -1, range);
+		
+		trace_start = (x, y, origin[2] + 500);
+		
+		trace_end = (x, y, origin[2] - 500);
+		
+		ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
+		
+		current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
+		
+		candidate = ground_trace["position"];
+		
+		if(distancesquared(origin, candidate) >= current_min_dist_sq && check_point_in_playable_area(candidate))
+			return candidate;
+		
+		if(tries >= 15)
+		{
+			return origin;
+		}
+		
+		tries ++;
+		
+		wait 0.05;
+	}
+	
+	return origin;
 }
 
 bot_shield_sync_think()
