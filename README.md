@@ -29,6 +29,6 @@ The most relevant characteristics that these bots have are:
 * Bots will throw grenades at the zombies if there is a group of them within an small radius.
 
 * Bots can be commanded using the "follow", "wander" or "wander_further" commands, by double-tap the "2" key on the keyboard or, if using a controller, by double-tapping the down arrow on the directional pad.
-(The "wander_further" command is intended for use on larger maps).
+(The "wander_further" command is intended for its usage on larger maps).
 
 * They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
