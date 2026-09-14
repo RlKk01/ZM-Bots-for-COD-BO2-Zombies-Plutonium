@@ -352,7 +352,7 @@ bot_health()
 	
 	while(1)
 	{
-		max_health = 3000;
+		max_health = 1200;
 		
 		self setnormalhealth(max_health);
 		self setmaxhealth(max_health);
@@ -377,11 +377,11 @@ bot_health_regen()
 			if(!isdefined(players[i].pers["isbot"]))
 				continue;
 			
-            if(players[i].health < 3000)
-                players[i].health += 50;
+            if(players[i].health < 1200)
+                players[i].health += 60;
 			
-            if(players[i].health > 3000)
-                players[i].health = 3000;
+            if(players[i].health > 1200)
+                players[i].health = 1200;
 		}
 		
 		wait 1;

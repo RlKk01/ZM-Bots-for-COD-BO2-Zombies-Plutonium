@@ -21,12 +21,6 @@ bot_dmg_norm_actor_damage_override(inflictor, attacker, damage, flags, meansofde
 
 bot_dmg_norm_get_scaled_damage(attacker, damage, meansofdeath)
 {
-	if((getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival"))
-		return damage;
-	
-	if(get_players().size > 4)
-		return damage;
-	
 	if(meansofdeath == "MOD_MELEE")
 		return damage;
 
