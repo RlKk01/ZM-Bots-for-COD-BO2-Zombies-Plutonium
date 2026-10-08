@@ -262,7 +262,7 @@ init()
     init_door_cache();
     init_debris_cache();
 	
-	bot_amount = getdvarintdefault("zm_bots", 7);
+	bot_amount = getdvarintdefault("zm_bots", 0);
 	
 	for(i = 0; i < bot_amount; i++)
 		spawn_bot();
@@ -352,7 +352,7 @@ bot_health()
 	
 	while(1)
 	{
-		max_health = 1200;
+		max_health = 250;
 		
 		self setnormalhealth(max_health);
 		self setmaxhealth(max_health);
@@ -377,14 +377,14 @@ bot_health_regen()
 			if(!isdefined(players[i].pers["isbot"]))
 				continue;
 			
-            if(players[i].health < 1200)
-                players[i].health += 60;
+            if(players[i].health < 250)
+                players[i].health += 50;
 			
-            if(players[i].health > 1200)
-                players[i].health = 1200;
+            if(players[i].health > 250)
+                players[i].health = 250;
 		}
 		
-		wait 1;
+		wait 0.5;
 	}
 }
 
@@ -402,8 +402,8 @@ bot_set_perks()
 	{
 		self setperk("specialty_rof");
 		self setperk("specialty_deadshot");
+		self setperk("specialty_fastreload");
 		self setperk("specialty_flakjacket");
-		self setperk("specialty_unlimitedsprint");
 		
 		self waittill("player_revived");
 	}
@@ -565,7 +565,7 @@ bot_set_dvars()
 	setdvar("bot_minstrafetime", "3000");
 	setdvar("bot_maxstrafetime", "6000");
 	setdvar("scr_help_dist", "512");
-	setdvar("bot_allowgrenades", "0");
+	setdvar("bot_allowgrenades", "1");
 	setdvar("bot_meleedist", "70");
 	setdvar("bot_yawspeed", "4");
 	setdvar("bot_sprintdistance", "256");
@@ -810,6 +810,9 @@ bot_get_weapon_score(weapon)
 	if(issubstr(weapon, "minigun") || 
 	   issubstr(weapon, "titus") || 
 	   
+	   issubstr(weapon, "srm1216") || 
+	   issubstr(weapon, "saiga12") || 
+	   
 	   issubstr(weapon, "c96_upgraded") || 
 	   issubstr(weapon, "m1911_upgraded") || 
 	   issubstr(weapon, "fnp45_upgraded"))
@@ -821,10 +824,7 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "hamr") || 
 	   issubstr(weapon, "lsat") || 
 	   issubstr(weapon, "mk48") || 
-	   issubstr(weapon, "qbb95") || 
-	   
-	   issubstr(weapon, "ksg") || 
-	   issubstr(weapon, "srm1216"))
+	   issubstr(weapon, "qbb95"))
 	
 	   return 95;
     
@@ -833,10 +833,7 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "galil") || 
 	   issubstr(weapon, "scar") || 
 	   issubstr(weapon, "an94") || 
-	   issubstr(weapon, "hk416") || 
-	
-	   issubstr(weapon, "870mcs") || 
-	   issubstr(weapon, "saiga12"))
+	   issubstr(weapon, "hk416"))
 	
 	   return 90;
 	
@@ -1263,7 +1260,7 @@ bot_buy_wallbuy()
 		return;
 	}
 	
-	if(self.score < 1250)
+	if(level.round_number < 2)
 	{
 		self cancelgoal("weaponbuy");
 		
@@ -1284,7 +1281,7 @@ bot_buy_wallbuy()
 	if(isdefined(self.bot.next_wallbuy_scan) && gettime() < self.bot.next_wallbuy_scan)
 		return;
 	
-	self.bot.next_wallbuy_scan = gettime() + 2500;
+	self.bot.next_wallbuy_scan = gettime() + 8000;
 	
 	weapontobuy = undefined;
 	
@@ -1587,42 +1584,9 @@ bot_buy_perks()
 		
 		if(level.round_number >= 8)
 		{
-			if(level.perk_purchase_limit == 4)
-			{
-				if(getdvar("mapname") == "zm_transit" || getdvar("mapname") == "zm_highrise" || getdvar("mapname") == "zm_buried")
-				{
-					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_additionalprimaryweapon");
-					
-					costs = array(1500, 3000, 2000, 2000, 2500, 3000, 4000);
-				}
-				
-				if(getdvar("mapname") == "zm_nuked")
-				{
-					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_additionalprimaryweapon");
-					
-					costs = array(1500, 3000, 2000, 4000);
-				}
-				
-				if(getdvar("mapname") == "zm_prison")
-				{
-					perks = array("specialty_fastreload", "specialty_rof", "specialty_grenadepulldeath", "specialty_deadshot");
-					
-					costs = array(3000, 2000, 2000, 1500);
-				}
-				
-				if(getdvar("mapname") == "zm_tomb")
-				{
-					perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_longersprint", "specialty_movefaster", "specialty_additionalprimaryweapon");
-					
-					costs = array(1500, 3000, 2000, 2500, 4000);
-				}
-			}
-			else
-			{
-				perks = array("specialty_quickrevive", "specialty_fastreload", "specialty_rof", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_deadshot", "specialty_additionalprimaryweapon", "specialty_flakjacket", "specialty_grenadepulldeath");
-				
-				costs = array(1500, 3000, 2000, 2000, 2500, 3000, 1500, 4000, 2000, 2000);
-			}
+			perks = array("specialty_quickrevive", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_additionalprimaryweapon", "specialty_grenadepulldeath");
+			
+			costs = array(1500, 2000, 2500, 3000, 4000, 2000);
 			
 			machines = get_cached_vending_machines();
 			
@@ -1677,7 +1641,7 @@ bot_force_door_nearby()
     
     closest = undefined;
 	
-    closestDistSq = 90000;
+    closestdistsq = 90000;
     
     foreach(door in doors)
     {
@@ -1692,15 +1656,24 @@ bot_force_door_nearby()
 		
         if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0 || self.score < door.zombie_cost)
             continue;
+		
+        if(isdefined(door.script_noteworthy))
+        {
+            if(door.script_noteworthy == "electric_door" || door.script_noteworthy == "local_electric_door")
+            {
+                if(!flag("power_on"))
+                    continue;
+            }
+        }
         
         if(isdefined(door.bot_door_claimer) && door.bot_door_claimer != self && isalive(door.bot_door_claimer))
             continue;
         
         d = distancesquared(self.origin, door.origin);
 		
-        if(d < closestDistSq)
+        if(d < closestdistsq)
         {
-            closestDistSq = d;
+            closestdistsq = d;
 			
             closest = door;
         }
@@ -1715,7 +1688,7 @@ bot_force_door_nearby()
     if(self getgoal("flee") || self hasgoal("flee"))
         self cancelgoal("flee");
     
-    if(closestDistSq <= 90000)
+    if(closestdistsq <= 90000)
     {
         closest.bot_door_claimer = self;
 		
@@ -1784,6 +1757,15 @@ bot_buy_door()
 		
         if(self.score < door.zombie_cost)
             continue;
+		
+        if(isdefined(door.script_noteworthy))
+        {
+            if(door.script_noteworthy == "electric_door" || door.script_noteworthy == "local_electric_door")
+            {
+                if(!flag("power_on"))
+                    continue;
+            }
+        }
 		
 		if(isdefined(door.bot_door_claimer) && isdefined(door.bot_door_claimer) && door.bot_door_claimer != self)
 		{
@@ -2421,7 +2403,7 @@ execute_bot_teleport()
     }
     else 
     {
-        self iprintln("You must be on the ground to teleport the Bots.");
+        self iprintln("You must be on the ground to teleport the bots.");
     }
 }
 
@@ -2693,7 +2675,7 @@ bot_update_wander()
 					if(level.bot_command_mode == "wander_further")
 						wander_range = 3000;
 					else
-						wander_range = 600;
+						wander_range = 500;
 					
 					location = get_random_walkable_location(self.origin, wander_range, self);
 					
@@ -2717,7 +2699,7 @@ get_random_walkable_location(origin, range, player)
 {
 	tries = 0;
 	
-	min_dist_sq = (range * 0.4) * (range * 0.4);
+	min_dist_sq = (range * 0.2) * (range * 0.2);
 	
 	for(;;)
 	{
@@ -2867,19 +2849,19 @@ bot_give_shield()
 			current_weapon = primaries[0];
 	}
 	
-	if(getdvar("mapname") == "zm_transit")
+	if(getdvar("mapname") == "zm_tomb")
 	{
-		if(self hasweapon("riotshield_zm"))
-			self takeweapon("riotshield_zm");
+		if(self hasweapon("tomb_shield_zm"))
+			self takeweapon("tomb_shield_zm");
 		
-		self giveweapon("riotshield_zm");
+		self giveweapon("tomb_shield_zm");
 		
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
 		self pressads(0);
 		
-		self switchtoweapon("riotshield_zm");
+		self switchtoweapon("tomb_shield_zm");
 		
 		switch_timeout = gettime() + 1000;
 		
@@ -2888,7 +2870,7 @@ bot_give_shield()
 		
 		wait 0.75;
 		
-		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
+		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
 		{
 			self allowattack(0);
 			self pressads(0);
@@ -2936,20 +2918,19 @@ bot_give_shield()
 				wait 0.05;
 		}
 	}
-	
-	if(getdvar("mapname") == "zm_tomb")
+	else
 	{
-		if(self hasweapon("tomb_shield_zm"))
-			self takeweapon("tomb_shield_zm");
+		if(self hasweapon("riotshield_zm"))
+			self takeweapon("riotshield_zm");
 		
-		self giveweapon("tomb_shield_zm");
+		self giveweapon("riotshield_zm");
 		
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
 		self pressads(0);
 		
-		self switchtoweapon("tomb_shield_zm");
+		self switchtoweapon("riotshield_zm");
 		
 		switch_timeout = gettime() + 1000;
 		
@@ -2958,7 +2939,7 @@ bot_give_shield()
 		
 		wait 0.75;
 		
-		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
+		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
 		{
 			self allowattack(0);
 			self pressads(0);
