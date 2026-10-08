@@ -2918,7 +2918,8 @@ bot_give_shield()
 				wait 0.05;
 		}
 	}
-	else
+	
+	if(getdvar("mapname") == "zm_transit")
 	{
 		if(self hasweapon("riotshield_zm"))
 			self takeweapon("riotshield_zm");
