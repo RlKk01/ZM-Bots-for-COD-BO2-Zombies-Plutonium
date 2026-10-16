@@ -788,10 +788,8 @@ bot_get_weapon_score(weapon)
 		return 0;
     
 	if(issubstr(weapon, "metalstorm") || 
-	   issubstr(weapon, "willy_pete") || 
-	   issubstr(weapon, "time_bomb") || 
-	   issubstr(weapon, "emp_grenade") || 
-	   issubstr(weapon, "cymbal_monkey"))
+	   
+	   issubstr(weapon, "time_bomb"))
 	
 	   return 0;
 	
@@ -1485,7 +1483,7 @@ bot_pap_guns()
 		if(issubstr(weapon, "blunder") && !issubstr(weapon, "upgraded") && weapon == upgrade_name)
 			upgrade_name = "blundergat_upgraded_zm";
 		
-		if(weapon == upgrade_name)
+		if(maps\mp\zombies\_zm_weapons::get_base_name(weapon) == upgrade_name)
 		{
 			if(self getgoal("pap") || self hasgoal("pap"))
 				self cancelgoal("pap");

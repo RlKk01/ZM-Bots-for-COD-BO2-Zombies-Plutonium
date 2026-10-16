@@ -483,11 +483,11 @@ bot_should_melee()
 	
     has_ballistic_knife = self bot_has_ballistic_knife();
 	
-    if(!insta_kill_on && !has_ballistic_knife && threat.health > knife_damage)
+	if(!insta_kill_on && !has_ballistic_knife && !is_true(threat.isscreecher) && !is_true(threat.is_avogadro) && threat.health > knife_damage)
         return false;
-
-    if(isdefined(self.animname) && (self.animname == "brutus_zm" || self.animname == "panzer_zm") && insta_kill_on)
-        return false;
+	
+	if(is_true(threat.is_brutus) || is_true(threat.is_mechz))
+		return false;
 	
     melee_range = getdvarfloatdefault("bot_meleedist", 70);
 	
@@ -524,74 +524,59 @@ bot_combat_melee()
 
 bot_should_throw_grenade()
 {
-	if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
-		return false;
-	
-	if(isdefined(level.round_number) && level.round_number <= 2)
-		return false;
-	
+    if(self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
+        return false;
+
+    if(isdefined(level.round_number) && level.round_number < 2)
+        return false;
+
     if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
         return false;
-	
+
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
         return false;
 
     threat = self.bot.threat.entity;
-	
+
     if(!isdefined(threat) || !isalive(threat))
         return false;
-	
+
     has_grenade = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
 	
-	has_sticky_grenade = self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm");
-	
+    has_sticky_grenade = self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm");
+
     if(!has_grenade && !has_sticky_grenade)
         return false;
-	
-	weapon = self getcurrentweapon();
-	
-	if(issubstr(weapon, "minigun"))
-		return false;
-	
+
     if(isdefined(self.bot.next_grenade_throw) && gettime() < self.bot.next_grenade_throw)
         return false;
-	
+
     throw_dist_sq = distancesquared(self.origin, threat.origin);
-	
-    if(throw_dist_sq < 160000 || throw_dist_sq > 1000000)
+
+    if(throw_dist_sq < 90000 || throw_dist_sq > 1000000)
         return false;
+
+    required_cluster = 5;
 	
-    cluster_radius_sq = 1000000;
+    cluster_radius_sq = 600 * 600;
 	
     cluster_count = 0;
-	
+
     zombies = get_cached_zombies();
-	
+
     foreach(zombie in zombies)
     {
         if(!isalive(zombie))
             continue;
-		
+
+        if(threat_should_ignore(zombie))
+            continue;
+
         if(distancesquared(threat.origin, zombie.origin) <= cluster_radius_sq)
             cluster_count++;
     }
-	
-	round_number = isdefined(level.round_number) ? level.round_number : 3;
-	
-	required_cluster = 6 + int(round_number / 5);
-	
-    if(cluster_count < required_cluster)
-        return false;
-	
-	throw_chance = 35 - min(round_number, 27);
-	
-	if(throw_chance < 8)
-		throw_chance = 8;
-	
-	if(randomint(100) >= throw_chance)
-		return false;
-	
-    return true;
+
+    return cluster_count >= required_cluster;
 }
 
 bot_combat_throw_grenade()
@@ -601,75 +586,34 @@ bot_combat_throw_grenade()
 
     if(is_true(self.bot.is_throwing_grenade))
         return;
-	
+
     self.bot.is_throwing_grenade = true;
-	
-	round_number = isdefined(level.round_number) ? level.round_number : 1;
-	
-    self.bot.next_grenade_throw = gettime() + randomintrange(20000, 32000) + (round_number * 500);
-	
-    primaries = self getweaponslistprimaries();
-	
-    original_weapon = primaries[0];
-	
-	target = self.bot.threat.entity;
-	
-    self allowattack(0);
-    self pressads(0);
-	
-    has_frag = self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm");
-	
-    has_sticky = self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm");
-	
-    if(has_frag)
-        self switchtoweapon("frag_grenade_zm");
-    else if(has_sticky)
-        self switchtoweapon("sticky_grenade_zm");
-	
-    switch_timeout = gettime() + 1500;
-	
-    while(self isswitchingweapons() && gettime() < switch_timeout)
-        wait 0.05;
-	
-    if(!isdefined(target) || !isalive(target))
-    {
-		self switchtoweapon(original_weapon);
-		
-        self.bot.is_throwing_grenade = undefined;
-		
-        return;
-    }
-	
-	if(isdefined(target))
-		self bot_lookat_entity(target);
-	
-    wait 0.2;
-	
-    self allowattack(1);
-	
-    throw_start_timeout = gettime() + 250;
-	
-    while(!self isthrowinggrenade() && gettime() < throw_start_timeout)
-    {
-        if(!isdefined(target) || !isalive(target))
-            break;
 
-        wait 0.05;
-    }
+    round_number = isdefined(level.round_number) ? level.round_number : 1;
 	
-    if(self isthrowinggrenade())
-    {
-        throw_end_timeout = gettime() + 1000;
+    self.bot.next_grenade_throw = gettime() + randomintrange(5000, 30000) + (round_number * 500);
 
-        while(self isthrowinggrenade() && gettime() < throw_end_timeout)
-            wait 0.05;
+    target = self.bot.threat.entity;
+	
+    weapon = undefined;
+
+    if(self getweaponammoclip("frag_grenade_zm") + self getweaponammostock("frag_grenade_zm") > 0)
+        weapon = "frag_grenade_zm";
+    else if(self getweaponammoclip("sticky_grenade_zm") + self getweaponammostock("sticky_grenade_zm") > 0)
+        weapon = "sticky_grenade_zm";
+
+    if(isdefined(weapon) && isdefined(target) && isalive(target))
+    {
+        if(self throwgrenade(weapon, target.origin))
+        {
+            end_time = gettime() + 2000;
+
+            while(self isthrowinggrenade() && gettime() < end_time)
+                wait 0.05;
+        }
     }
-	
-    self allowattack(0);
-	
-	self switchtoweapon(original_weapon);
-	
-	self.bot.is_throwing_grenade = undefined;
+
+    self.bot.is_throwing_grenade = undefined;
 }
 
 bot_should_hip_fire()
@@ -798,12 +742,13 @@ bot_update_aim(frames)
 		
 		height = centroid[2] - prediction[2];
 		
-		aim_offset = 5;
+		aim_offset = 0;
 
 		if(dist > 800)
-			aim_offset -= 5;
-		else if(dist < 400)
-			aim_offset += 15;
+			aim_offset -= 10;
+		
+		if(dist < 400)
+			aim_offset += 20;
 		
 		return prediction + (0, 0, height + aim_offset);
 	}
@@ -920,8 +865,8 @@ bot_best_enemy()
     best = undefined;
 	
     best_score = -999999999;
-    
-    foreach(zombie in enemies)
+	
+	foreach(zombie in enemies)
     {
         if(threat_should_ignore(zombie))
             continue;
@@ -985,7 +930,13 @@ bot_expire_stale_threat()
 
 threat_should_ignore(entity)
 {
-	return 0;
+    if(is_true(entity.is_avogadro) && isdefined(entity.state))
+    {
+        if(entity.state == "cloud" || entity.state == "exiting" || entity.state == "phasing")
+            return 1;
+    }
+
+    return 0;
 }
 
 bot_combat_dead(damage)

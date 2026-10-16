@@ -36,7 +36,7 @@ bot_dmg_norm_get_scaled_damage(attacker, damage, meansofdeath)
 	if(!isdefined(self.health) || !isdefined(self.maxhealth) || self.maxhealth <= 0)
 		return damage;
 
-	if(isdefined(self.animname) && (self.animname == "brutus_zm" || self.animname == "panzer_zm" || self.animname == "avogadro_zm"))
+	if(isdefined(self.animname) && (self.animname == "panzer_zm" || self.animname == "brutus_zm" || self.animname == "avogadro_zm"))
 		return damage;
 	
 	if(!isdefined(level.round_number) || level.round_number < 10)
