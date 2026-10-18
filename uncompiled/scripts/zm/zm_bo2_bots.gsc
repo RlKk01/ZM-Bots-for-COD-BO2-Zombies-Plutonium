@@ -337,7 +337,7 @@ bot_spawn()
 	self thread bot_main();
 	self thread bot_shield_sync_think();
 	self thread bot_weapon_switch_think();
-	self thread bot_weapon_failsafe_monitor();
+//	self thread bot_weapon_failsafe_monitor();
 }
 
 bot_health()
@@ -594,6 +594,7 @@ bot_spawn_init()
 	self.bot.glass_origin = undefined;
 	self.bot.ignore_entity = [];
 	self.bot.previous_origin = self.origin;
+	self.bot.stay_pos = undefined;
 	self.bot.time_ads = 0;
 	self.bot.is_meleeing = undefined;
 	self.bot.is_getting_shield = undefined;
@@ -1652,9 +1653,6 @@ bot_force_door_nearby()
         if(isdefined(door.has_been_opened) && door.has_been_opened)
             continue;
 		
-        if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0 || self.score < door.zombie_cost)
-            continue;
-		
         if(isdefined(door.script_noteworthy))
         {
             if(door.script_noteworthy == "electric_door" || door.script_noteworthy == "local_electric_door")
@@ -1663,6 +1661,12 @@ bot_force_door_nearby()
                     continue;
             }
         }
+		
+        if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0)
+            continue;
+		
+        if(self.score < door.zombie_cost)
+            continue;
         
         if(isdefined(door.bot_door_claimer) && door.bot_door_claimer != self && isalive(door.bot_door_claimer))
             continue;
@@ -1750,12 +1754,6 @@ bot_buy_door()
         if(isdefined(door.has_been_opened) && door.has_been_opened)
             continue;
 		
-		if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0)
-			continue;
-		
-        if(self.score < door.zombie_cost)
-            continue;
-		
         if(isdefined(door.script_noteworthy))
         {
             if(door.script_noteworthy == "electric_door" || door.script_noteworthy == "local_electric_door")
@@ -1764,6 +1762,12 @@ bot_buy_door()
                     continue;
             }
         }
+		
+		if(!isdefined(door.zombie_cost) || door.zombie_cost <= 0)
+			continue;
+		
+        if(self.score < door.zombie_cost)
+            continue;
 		
 		if(isdefined(door.bot_door_claimer) && isdefined(door.bot_door_claimer) && door.bot_door_claimer != self)
 		{
@@ -2470,16 +2474,29 @@ bot_command_mode_monitor()
 bot_cycle_command_mode()
 {
     if(!isdefined(level.bot_command_mode))
-        level.bot_command_mode = "wander";
+        level.bot_command_mode = "stay";
 
-    if(level.bot_command_mode == "wander")
-        level.bot_command_mode = "wander_further";
-    else if(level.bot_command_mode == "wander_further")
+    if(level.bot_command_mode == "stay")
         level.bot_command_mode = "follow";
-    else
+    else if(level.bot_command_mode == "follow")
         level.bot_command_mode = "wander";
+    else if(level.bot_command_mode == "wander")
+        level.bot_command_mode = "wander_further";
+	else
+		level.bot_command_mode = "stay";
 	
     level.bot_commander = self;
+	
+    foreach(player in get_players())
+    {
+        if(!isdefined(player.bot))
+            continue;
+
+        if(level.bot_command_mode == "stay")
+            player.bot.stay_pos = player.origin;
+        else
+            player.bot.stay_pos = undefined;
+    }
 	
     self iprintlnbold("Bots: " + level.bot_command_mode);
 }
@@ -2609,6 +2626,26 @@ bot_update_wander()
 		
 		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
 		{
+			if(level.bot_command_mode == "stay" && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			{
+				if(!isdefined(self.bot.stay_pos))
+					self.bot.stay_pos = self.origin;
+				
+				if(!self hasgoal("wander") || distancesquared(self getgoal("wander"), self.bot.stay_pos) > 16)
+				{
+					self cancelgoal("wander");
+					
+					self addgoal(self.bot.stay_pos, 40, 1, "wander");
+				}
+				
+				wait 0.05;
+				
+				continue;
+			}
+		}
+		
+		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
+		{
 			if(level.bot_command_mode == "follow" && isdefined(level.bot_commander) && isalive(level.bot_commander))
 			{
 				if(isdefined(player))
@@ -2633,7 +2670,7 @@ bot_update_wander()
 						
 						self addgoal(player.origin, 100, 1, "wander");
 						
-						if(dist_sq < 15625)
+						if(dist_sq < 10000)
 						{
 							self.bot.is_following = false;
 							
@@ -2671,11 +2708,16 @@ bot_update_wander()
 				if(!self hasgoal("wander") || self atgoal("wander") || time_at_point >= 2)
 				{
 					if(level.bot_command_mode == "wander_further")
-						wander_range = 3000;
+					{
+						location = wander_further_get_walkable_location(self.origin, 3000, self);
+						
+						if(isdefined(location) && location == self.origin)
+							location = undefined;
+					}
 					else
-						wander_range = 500;
-					
-					location = get_random_walkable_location(self.origin, wander_range, self);
+					{
+						location = self get_wander_location(self.origin, 600);
+					}
 					
 					if(isdefined(location))
 					{
@@ -2695,9 +2737,66 @@ bot_update_wander()
 
 get_random_walkable_location(origin, range, player)
 {
+    if(isdefined(player.bot.wander_retry) && gettime() < player.bot.wander_retry)
+        return undefined;
+
+    nodes = getnodesinradius(origin, range, range * 0.2, 1000, "any", 256);
+
+    if(isdefined(nodes) && nodes.size > 0)
+    {
+        nodes = array_randomize(nodes);
+
+        tries = 0;
+
+        foreach(node in nodes)
+        {
+            if(tries >= 1000)
+                break;
+
+            if(isdefined(level.zones))
+            {
+                zone = maps\mp\zombies\_zm_zonemgr::get_zone_from_position(node.origin + (0, 0, 32), 1);
+
+                if(isdefined(zone) && !maps\mp\zombies\_zm_zonemgr::zone_is_enabled(zone))
+                    continue;
+            }
+
+            tries++;
+
+            if(!findpath(origin, node.origin, undefined, 0, 1))
+                continue;
+
+            return node.origin;
+        }
+    }
+
+    player.bot.wander_retry = gettime() + 1500;
+
+    return undefined;
+}
+
+wander_further_get_walkable_location(origin, range, player)
+{
 	tries = 0;
 	
 	min_dist_sq = (range * 0.2) * (range * 0.2);
+	
+	timer = gettime();
+	
+	if(!isdefined(player.bot.wander_visited))
+		player.bot.wander_visited = [];
+	
+	fresh = [];
+	
+	foreach(entry in player.bot.wander_visited)
+	{
+		if(entry.expire > timer)
+			fresh[fresh.size] = entry;
+	}
+	
+	player.bot.wander_visited = fresh;
+	
+	skipped_cooldown = false;
 	
 	for(;;)
 	{
@@ -2710,15 +2809,35 @@ get_random_walkable_location(origin, range, player)
 		
 		ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
 		
-		current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
+		current_min_dist_sq = min_dist_sq * (1 - (tries / 1000));
 		
 		candidate = ground_trace["position"];
 		
 		if(distancesquared(origin, candidate) >= current_min_dist_sq && check_point_in_playable_area(candidate))
-			return candidate;
-		
-		if(tries >= 15)
 		{
+			if(player bot_wander_on_cooldown(candidate, timer))
+			{
+				skipped_cooldown = true;
+			}
+			else if(findpath(origin, candidate, undefined, 0, 1))
+			{
+				entry = spawnstruct();
+				
+				entry.origin = candidate;
+				
+				entry.expire = timer + 45000;
+				
+				player.bot.wander_visited[player.bot.wander_visited.size] = entry;
+				
+				return candidate;
+			}
+		}
+		
+		if(tries >= 1000)
+		{
+			if(skipped_cooldown)
+				player.bot.wander_visited = [];
+			
 			return origin;
 		}
 		
@@ -2728,6 +2847,96 @@ get_random_walkable_location(origin, range, player)
 	}
 	
 	return origin;
+}
+
+get_wander_location(origin, range)
+{
+    if(isdefined(self.bot.wander_retry) && gettime() < self.bot.wander_retry)
+        return undefined;
+
+    if(!isdefined(self.bot.wander_visited))
+        self.bot.wander_visited = [];
+
+    timer = gettime();
+
+    fresh = [];
+
+    foreach(entry in self.bot.wander_visited)
+    {
+        if(entry.expire > timer)
+            fresh[fresh.size] = entry;
+    }
+
+    self.bot.wander_visited = fresh;
+
+    nodes = getnodesinradius(origin, range, range * 0.2, 1000, "any", 256);
+
+    skipped_cooldown = false;
+
+    if(isdefined(nodes) && nodes.size > 0)
+    {
+        nodes = array_randomize(nodes);
+
+        tries = 0;
+
+        foreach(node in nodes)
+        {
+            if(tries >= 1000)
+                break;
+
+            if(self bot_wander_on_cooldown(node.origin, timer))
+            {
+                skipped_cooldown = true;
+
+                continue;
+            }
+
+            if(isdefined(level.zones))
+            {
+                zone = maps\mp\zombies\_zm_zonemgr::get_zone_from_position(node.origin + (0, 0, 32), 1);
+
+                if(isdefined(zone) && !maps\mp\zombies\_zm_zonemgr::zone_is_enabled(zone))
+                    continue;
+            }
+
+            tries++;
+
+            if(!findpath(origin, node.origin, undefined, 0, 1))
+                continue;
+
+            entry = spawnstruct();
+            entry.origin = node.origin;
+            entry.expire = timer + 15000;
+
+            self.bot.wander_visited[self.bot.wander_visited.size] = entry;
+
+            return node.origin;
+        }
+    }
+
+    if(skipped_cooldown)
+    {
+        self.bot.wander_visited = [];
+
+        self.bot.wander_retry = gettime() + 500;
+
+        return undefined;
+    }
+
+    self.bot.wander_retry = gettime() + 1500;
+
+    return undefined;
+}
+
+bot_wander_on_cooldown(pos, timer)
+{
+    foreach(entry in self.bot.wander_visited)
+    {
+        if(entry.expire > timer && distancesquared(pos, entry.origin) < 60000)
+            return true;
+    }
+
+    return false;
 }
 
 bot_shield_sync_think()

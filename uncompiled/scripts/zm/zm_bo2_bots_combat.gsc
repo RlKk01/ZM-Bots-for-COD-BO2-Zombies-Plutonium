@@ -233,7 +233,14 @@ bot_combat_main()
 		}
 	}
 	
-	if(self bot_on_target(self.bot.threat.entity.origin, 100))
+	aim_point = self.bot.threat.aim_target;
+	
+	if(!isdefined(aim_point))
+	{
+		aim_point = self.bot.threat.entity.origin;
+	}
+	
+	if(self bot_on_target(aim_point, self bot_get_fire_radius(aim_point)))
 	{
 		self allowattack(1);
 	}
@@ -553,7 +560,7 @@ bot_should_throw_grenade()
 
     throw_dist_sq = distancesquared(self.origin, threat.origin);
 
-    if(throw_dist_sq < 90000 || throw_dist_sq > 1000000)
+    if(throw_dist_sq < 40000 || throw_dist_sq > 1000000)
         return false;
 
     required_cluster = 5;
@@ -717,24 +724,9 @@ bot_update_aim(frames)
 	if(!isdefined(ent.origin))
 		return self.origin;
 
-	distsq = distancesquared(self.origin, ent.origin);
-	
-	dist = sqrt(distsq);
-
-	if(dist > 1200) 
-		frames = 12;
-	else if(dist > 800) 
-		frames = 9;
-	else if(dist > 400) 
-		frames = 6;
-	else 
-		frames = 4;
+	dist = distance(self.origin, ent.origin);
 
 	prediction = self predictposition(ent, frames);
-	
-	vel = ent getvelocity();
-	
-	prediction += vel * 0.07;
 	
 	if(!threat_is_player())
 	{
@@ -743,12 +735,9 @@ bot_update_aim(frames)
 		height = centroid[2] - prediction[2];
 		
 		aim_offset = 0;
-
-		if(dist > 800)
-			aim_offset -= 10;
 		
-		if(dist < 400)
-			aim_offset += 20;
+		if(dist < 300)
+			aim_offset += 25;
 		
 		return prediction + (0, 0, height + aim_offset);
 	}
@@ -756,6 +745,15 @@ bot_update_aim(frames)
 	height = ent getplayerviewheight();
 	
 	return prediction + (0, 0, height);
+}
+
+bot_get_fire_radius(aim_point)
+{
+	dist = distance(self getplayercamerapos(), aim_point);
+
+	radius = dist * 0.05;
+
+	return clamp(radius, 18, 40);
 }
 
 bot_on_target(aim_target, radius)
