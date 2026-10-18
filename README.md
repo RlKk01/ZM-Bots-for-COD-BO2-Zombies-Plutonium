@@ -6,8 +6,6 @@ If you want to play with more than 3 bots, just increase the party size in the c
 
 Also, if you want to play with this mod along with another one, e.g., a mod that adds custom weapons, you just need to drag the file zmbots.iwd inside the "zm_bots" folder and drag it to the other mod folder.
 
-If anyone wants to improve this mod, feel free to try, it’s completely open source.
-
 The most relevant characteristics that these bots have are:
 
 * They will purchase doors or clear debris within a small radius range.
@@ -28,7 +26,7 @@ The most relevant characteristics that these bots have are:
 
 * Bots will throw grenades at the zombies if there is a group of them within an small radius.
 
-* Bots can be commanded using the "follow", "wander" or "wander_further" commands, by double-tap the "2" key on the keyboard or, if using a controller, by double-tapping the down arrow on the directional pad.
+* Bots can be commanded using the "follow", "stay", "wander" or "wander_further" commands, by double-tap the "2" key on the keyboard or, if using a controller, by double-tapping the down arrow on the directional pad.
 (The "wander_further" command is intended for its usage on larger maps).
 
 * They will teleport to the player by double-tap the “5” key on the keyboard or, if using a controller, by double-tapping the left arrow on the directional pad.
