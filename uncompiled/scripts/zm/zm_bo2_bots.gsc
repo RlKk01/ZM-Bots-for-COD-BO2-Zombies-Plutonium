@@ -2477,11 +2477,11 @@ bot_cycle_command_mode()
         level.bot_command_mode = "stay";
 
     if(level.bot_command_mode == "stay")
-        level.bot_command_mode = "follow";
-    else if(level.bot_command_mode == "follow")
         level.bot_command_mode = "wander";
     else if(level.bot_command_mode == "wander")
         level.bot_command_mode = "wander_further";
+    else if(level.bot_command_mode == "wander_further")
+        level.bot_command_mode = "follow";
 	else
 		level.bot_command_mode = "stay";
 	
