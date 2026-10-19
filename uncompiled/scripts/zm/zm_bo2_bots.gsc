@@ -704,6 +704,27 @@ bot_pickup_powerup()
 	
 	foreach(powerup in powerups)
 	{
+		if(!findpath(self.origin, powerup.origin, undefined, 0, 1))
+		{
+			self cancelgoal("powerup");
+			
+			continue;
+		}
+		
+		if(distancesquared(self.origin, powerup.origin) > 1000000)
+		{
+			self cancelgoal("powerup");
+			
+			continue;
+		}
+		
+		if(getdvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
+		{
+			self cancelgoal("powerup");
+			
+			continue;
+		}
+		
 		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			self cancelgoal("powerup");
@@ -733,27 +754,6 @@ bot_pickup_powerup()
 				
 				continue;
 			}
-		}
-		
-		if(getdvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
-		{
-			self cancelgoal("powerup");
-			
-			continue;
-		}
-		
-		if(distancesquared(self.origin, powerup.origin) > 1000000)
-		{
-			self cancelgoal("powerup");
-			
-			continue;
-		}
-		
-		if(!findpath(self.origin, powerup.origin, undefined, 0, 1))
-		{
-			self cancelgoal("powerup");
-			
-			continue;
 		}
 		
 		self addgoal(powerup.origin, 25, 2, "powerup");
@@ -953,14 +953,6 @@ bot_buy_box()
     {
         if(findpath(self.origin, current_box.origin, undefined, 0, 1))
         {
-			if(!findpath(self.origin, current_box.origin, undefined, 0, 1))
-			{
-				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
-					self cancelgoal("boxbuy");
-				
-				return;
-			}
-			
 			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
 			{
 				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
@@ -1310,6 +1302,7 @@ bot_buy_wallbuy()
 			if(!findpath(self.origin, wallbuy.origin, undefined, 0, 1))
 			{
 				self cancelgoal("weaponbuy");
+				
 				return;
 			}
 			
@@ -2750,7 +2743,7 @@ get_random_walkable_location(origin, range, player)
 
         foreach(node in nodes)
         {
-            if(tries >= 1000)
+            if(tries >= 8)
                 break;
 
             if(isdefined(level.zones))
@@ -2809,7 +2802,7 @@ wander_further_get_walkable_location(origin, range, player)
 		
 		ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
 		
-		current_min_dist_sq = min_dist_sq * (1 - (tries / 1000));
+		current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
 		
 		candidate = ground_trace["position"];
 		
@@ -2833,7 +2826,7 @@ wander_further_get_walkable_location(origin, range, player)
 			}
 		}
 		
-		if(tries >= 1000)
+		if(tries >= 15)
 		{
 			if(skipped_cooldown)
 				player.bot.wander_visited = [];
@@ -2881,7 +2874,7 @@ get_wander_location(origin, range)
 
         foreach(node in nodes)
         {
-            if(tries >= 1000)
+            if(tries >= 8)
                 break;
 
             if(self bot_wander_on_cooldown(node.origin, timer))
