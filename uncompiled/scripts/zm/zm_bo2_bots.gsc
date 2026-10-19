@@ -337,7 +337,7 @@ bot_spawn()
 	self thread bot_main();
 	self thread bot_shield_sync_think();
 	self thread bot_weapon_switch_think();
-//	self thread bot_weapon_failsafe_monitor();
+	self thread bot_weapon_failsafe_monitor();
 }
 
 bot_health()
@@ -1196,6 +1196,25 @@ bot_should_take_weapon(boxweapon, currentweapon)
 {
 	weapons = self getweaponslistprimaries();
 	
+	if(isdefined(boxweapon) && isdefined(weapons))
+	{
+		if(self hasperk("specialty_additionalprimaryweapon") && weapons.size < 3)
+		{
+			if(bot_get_weapon_score(boxweapon) >= 75)
+				return true;
+			
+			return false;
+		}
+		
+		if(weapons.size < 2)
+		{
+			if(bot_get_weapon_score(boxweapon) >= 50)
+				return true;
+			
+			return false;
+		}
+	}
+	
     score_current = bot_get_weapon_score(currentweapon);
     
     if(score_current >= 100)
@@ -1213,24 +1232,6 @@ bot_should_take_weapon(boxweapon, currentweapon)
         
         return true;
     }
-	
-	if(isdefined(weapons))
-	{
-		if(self hasperk("specialty_additionalprimaryweapon") && weapons.size < 3)
-		{
-			if(bot_get_weapon_score(boxweapon) >= 75)
-				return true;
-			
-			return false;
-		}
-		else if(weapons.size < 2)
-		{
-			if(bot_get_weapon_score(boxweapon) >= 50)
-				return true;
-			
-			return false;
-		}
-	}
 	
     score_box = bot_get_weapon_score(boxweapon);
 
@@ -3049,6 +3050,41 @@ bot_give_shield()
 			current_weapon = primaries[0];
 	}
 	
+	if(getdvar("mapname") != "zm_tomb" || getdvar("mapname") != "zm_prison")
+	{
+		if(self hasweapon("riotshield_zm"))
+			self takeweapon("riotshield_zm");
+		
+		self giveweapon("riotshield_zm");
+		
+		self.shielddamagetaken = 0;
+		
+		self allowattack(0);
+		self pressads(0);
+		
+		self switchtoweapon("riotshield_zm");
+		
+		switch_timeout = gettime() + 1000;
+		
+		while(self isswitchingweapons() && gettime() < switch_timeout)
+			wait 0.05;
+		
+		wait 0.75;
+		
+		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
+		{
+			self allowattack(0);
+			self pressads(0);
+			
+			self switchtoweapon(current_weapon);
+			
+			switch_timeout = gettime() + 1000;
+			
+			while(self isswitchingweapons() && gettime() < switch_timeout)
+				wait 0.05;
+		}
+	}
+	
 	if(getdvar("mapname") == "zm_tomb")
 	{
 		if(self hasweapon("tomb_shield_zm"))
@@ -3119,41 +3155,6 @@ bot_give_shield()
 		}
 	}
 	
-	if(getdvar("mapname") == "zm_transit")
-	{
-		if(self hasweapon("riotshield_zm"))
-			self takeweapon("riotshield_zm");
-		
-		self giveweapon("riotshield_zm");
-		
-		self.shielddamagetaken = 0;
-		
-		self allowattack(0);
-		self pressads(0);
-		
-		self switchtoweapon("riotshield_zm");
-		
-		switch_timeout = gettime() + 1000;
-		
-		while(self isswitchingweapons() && gettime() < switch_timeout)
-			wait 0.05;
-		
-		wait 0.75;
-		
-		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
-		{
-			self allowattack(0);
-			self pressads(0);
-			
-			self switchtoweapon(current_weapon);
-			
-			switch_timeout = gettime() + 1000;
-			
-			while(self isswitchingweapons() && gettime() < switch_timeout)
-				wait 0.05;
-		}
-	}
-	
 	self.bot.is_getting_shield = undefined;
 }
 
@@ -3186,6 +3187,13 @@ bot_weapon_switch_think()
 		}
 		
         if(!self isonground())
+		{
+			wait 0.05;
+			
+			continue;
+		}
+		
+		if(self ismantling() || self isonladder())
 		{
 			wait 0.05;
 			
@@ -3289,6 +3297,13 @@ bot_weapon_failsafe_monitor()
 		}
 		
         if(!self isonground())
+		{
+			wait 0.05;
+			
+			continue;
+		}
+		
+		if(self ismantling() || self isonladder())
 		{
 			wait 0.05;
 			

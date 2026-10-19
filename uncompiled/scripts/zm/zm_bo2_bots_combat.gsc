@@ -871,7 +871,7 @@ bot_best_enemy()
         
         dist = distance(self.origin, zombie.origin);
         
-        if(dist > wallshoot_range && !self botsighttracepassed(zombie))
+        if(!self botsighttracepassed(zombie) && dist > wallshoot_range)
             continue;
         
         score = 2000 - dist;
