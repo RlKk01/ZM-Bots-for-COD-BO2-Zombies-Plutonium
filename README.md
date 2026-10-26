@@ -8,11 +8,7 @@ Also, if you want to play with this mod along with another one, e.g., a mod that
 
 The most relevant characteristics that these bots have are:
 
-* They will purchase doors or clear debris within a small radius range.
-
-* They will buy wall-guns or pap their weapons on a determined radius.
-
-* They will buy perks within a large radius.
+* They will purchase doors, clear debris, buy wall-guns, pap their weapons or buy perks on a determined radius.
 
 * They smartly use the Mystery Box, following a weapon tier list to prioritize which guns they take.
 
