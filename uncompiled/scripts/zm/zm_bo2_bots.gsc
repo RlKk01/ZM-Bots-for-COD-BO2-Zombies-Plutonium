@@ -748,6 +748,7 @@ bot_buy_box()
             self.bot.waiting_for_box_animation = undefined;
             self.bot.current_box = undefined;
             self.bot.is_using_box = undefined;
+			self.bot.is_grabbing_box = undefined;
 			
             if(level.box_in_use_by_bot == self)
 				level.box_in_use_by_bot = undefined;
@@ -965,6 +966,15 @@ bot_monitor_box_animation(box)
 
     if(bot_should_take_weapon(box_weapon, worst_weapon))
     {
+		self.bot.is_grabbing_box = true;
+		
+		self allowattack(0);
+		self pressads(0);
+		
+		wait 0.25;
+		
+		weapons_before = self getweaponslistprimaries();
+		
 		for(attempt = 0; attempt < 3; attempt++)
         {
 			if(is_true(box._box_open) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
@@ -992,6 +1002,9 @@ bot_monitor_box_animation(box)
 				}
 				
                 wait 0.5;
+				
+                if(self bot_box_weapon_grabbed(box_weapon, weapons_before))
+                    break;
                 
                 if(!is_true(box._box_open))
                     break;
@@ -1001,6 +1014,8 @@ bot_monitor_box_animation(box)
                 break;
             }
         }
+		
+		self.bot.is_grabbing_box = undefined;
     }
     
 	self.bot.last_box_interaction_time = gettime();
@@ -1037,12 +1052,32 @@ bot_box_cleanup_watcher(zm_bots, box)
 	zm_bots.bot.waiting_for_box_animation = undefined;
 	zm_bots.bot.current_box = undefined;
     zm_bots.bot.is_using_box = undefined;
+	zm_bots.bot.is_grabbing_box = undefined;
 	
     if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zm_bots)
         box.chest_user = undefined;
 	
     if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zm_bots)
         level.box_in_use_by_bot = undefined;
+}
+
+bot_box_weapon_grabbed(box_weapon, weapons_before)
+{
+	if(isdefined(box_weapon) && self hasweapon(box_weapon))
+		return true;
+	
+	weapons_after = self getweaponslistprimaries();
+	
+	if(weapons_after.size != weapons_before.size)
+		return true;
+	
+	foreach(weap in weapons_after)
+	{
+		if(!array_contains(weapons_before, weap))
+			return true;
+	}
+	
+	return false;
 }
 
 bot_should_take_weapon(boxweapon, currentweapon)

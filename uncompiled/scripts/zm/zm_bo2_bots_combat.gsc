@@ -558,7 +558,7 @@ bot_can_do_combat()
 		return 0;
 	}
 	
-	if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_getting_shield) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+	if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_getting_shield) || is_true(self.bot.is_grabbing_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 	{
 		return 0;
 	}
