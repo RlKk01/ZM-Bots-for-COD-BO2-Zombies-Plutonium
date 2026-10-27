@@ -24,7 +24,12 @@ bot_combat_think(damage, attacker, direction)
 	if(self atgoal("flee"))
 		self cancelgoal("flee");
 	
-	if((isdefined(self.bot.threat.entity) && distancesquared(self.origin, self.bot.threat.position) <= 5625 || isdefined(damage)) && !self hasgoal("flee") && !self hasgoal("revive") && !is_true(self.bot.is_reviving) && !self hasgoal("selfrevive") && !is_true(self.bot.is_selfreviving))
+	follow_mode = isdefined(level.bot_command_mode) && level.bot_command_mode == "follow" && isdefined(level.bot_commander);
+	
+	if(follow_mode && (self getgoal("flee") || self hasgoal("flee")))
+		self cancelgoal("flee");
+	
+	if(!follow_mode && (isdefined(self.bot.threat.entity) && distancesquared(self.origin, self.bot.threat.position) <= 5625 || isdefined(damage)) && !self hasgoal("flee") && !self hasgoal("boxbuy") && !is_true(self.bot.is_using_box) && !self hasgoal("revive") && !is_true(self.bot.is_reviving) && !self hasgoal("selfrevive") && !is_true(self.bot.is_selfreviving))
 	{
 		if(!isdefined(self.bot.next_flee_scan) || gettime() > self.bot.next_flee_scan)
 		{
@@ -69,20 +74,20 @@ bot_combat_think(damage, attacker, direction)
 	
 	sight = self bot_best_enemy();
 	
+	if(!sight && !self bot_has_enemy())
+	{
+		self allowattack(0);
+		self pressads(0);
+		
+		return;
+	}
+	
 	if(!isdefined(self.bot.threat.entity))
 		return;
 	
 	if(threat_dead())
 	{
 		self bot_combat_dead();
-		
-		return;
-	}
-	
-	if(!sight && !self bot_has_enemy())
-	{
-		self allowattack(0);
-		self pressads(0);
 		
 		return;
 	}
@@ -226,7 +231,7 @@ bot_should_melee()
     if(!self isonground() || self getstance() == "prone")
         return false;
 	
-	if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+	if(is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		return false;
 	
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
@@ -293,7 +298,7 @@ bot_should_throw_grenade()
     if(isdefined(level.round_number) && level.round_number < 2)
         return false;
 
-    if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+    if(is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
         return false;
 
     if(self isreloading() || self isswitchingweapons() || self isthrowinggrenade())
@@ -553,7 +558,7 @@ bot_can_do_combat()
 		return 0;
 	}
 	
-	if(is_true(self.bot.is_getting_shield) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+	if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_getting_shield) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 	{
 		return 0;
 	}

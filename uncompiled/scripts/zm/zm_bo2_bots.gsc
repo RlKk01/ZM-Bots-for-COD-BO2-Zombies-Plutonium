@@ -500,10 +500,12 @@ bot_main()
 		if(self isremotecontrolling())
 			continue;
 		
+		self bot_combat_think(damage, attacker, direction);
+		
 		if(isdefined(self.bot.is_using_box) && self.bot.is_using_box)
 		{
-			self allowattack(0);
-			self pressads(0);
+			if(self getgoal("flee") || self hasgoal("flee"))
+				self cancelgoal("flee");
 			
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
@@ -513,7 +515,6 @@ bot_main()
 			continue;
 		}
 		
-		self bot_combat_think(damage, attacker, direction);
 		self bot_update_lookat();
 		self bot_stand_fix();
 		
@@ -552,6 +553,13 @@ bot_pickup_powerup()
 	
 	foreach(powerup in powerups)
 	{
+		if(getdvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
+		{
+			self cancelgoal("powerup");
+			
+			continue;
+		}
+		
 		if(!findpath(self.origin, powerup.origin, undefined, 0, 1))
 		{
 			self cancelgoal("powerup");
@@ -566,14 +574,7 @@ bot_pickup_powerup()
 			continue;
 		}
 		
-		if(getdvar("mapname") == "zm_prison" && is_in_cell_block(powerup.origin))
-		{
-			self cancelgoal("powerup");
-			
-			continue;
-		}
-		
-		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+		if(is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			self cancelgoal("powerup");
 			
@@ -636,13 +637,7 @@ bot_get_weapon_score(weapon)
     if(!isdefined(weapon) || weapon == "none")
 		return 0;
     
-	if(issubstr(weapon, "metalstorm") || 
-	   
-	   issubstr(weapon, "time_bomb"))
-	
-	   return 0;
-	
-    if(issubstr(weapon, "ray_gun") || 
+	if(issubstr(weapon, "ray_gun") || 
 	   issubstr(weapon, "mark2") || 
 	   issubstr(weapon, "freezegun") || 
 	   issubstr(weapon, "tesla") || 
@@ -711,6 +706,7 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "saritch") || 
 	   issubstr(weapon, "ballista") || 
 	   issubstr(weapon, "dsr50") || 
+	   issubstr(weapon, "metalstorm") || 
 	   issubstr(weapon, "m32"))
 	   
 	   return 50;
@@ -801,7 +797,7 @@ bot_buy_box()
     {
         if(findpath(self.origin, current_box.origin, undefined, 0, 1))
         {
-			if(is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
+			if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 			{
 				if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
 					self cancelgoal("boxbuy");
@@ -843,9 +839,6 @@ bot_buy_box()
             self.bot.is_using_box = true;
 			current_box.chest_user = self;
             level.box_in_use_by_bot = self;
-			
-			self allowattack(0);
-			self pressads(0);
 			
 			self.bot.waiting_for_box_animation = true;
 			
@@ -924,9 +917,6 @@ bot_monitor_box_animation(box)
 		
         return;
     }
-
-	if(self getgoal("wander") || self hasgoal("wander"))
-		self cancelgoal("wander");
     
     box.chest_user = self;
 	
@@ -975,16 +965,31 @@ bot_monitor_box_animation(box)
 
     if(bot_should_take_weapon(box_weapon, worst_weapon))
     {
-        for(attempt = 0; attempt < 3; attempt++)
+		for(attempt = 0; attempt < 3; attempt++)
         {
 			if(is_true(box._box_open) && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
             {
                 if(isdefined(box.unitrigger_stub) && isdefined(box.unitrigger_stub.trigger))
+				{
+					self allowattack(0);
+					self pressads(0);
+					
                     box.unitrigger_stub.trigger notify("trigger", self);
+				}
                 else if(isdefined(box.use_trigger))
+				{
+					self allowattack(0);
+					self pressads(0);
+					
                     box.use_trigger notify("trigger", self);
+				}
 				else
+				{
+					self allowattack(0);
+					self pressads(0);
+					
 					box notify("trigger", self);
+				}
 				
                 wait 0.5;
                 
@@ -1121,7 +1126,7 @@ bot_buy_wallbuy()
 	if(isdefined(self.bot.next_wallbuy_scan) && gettime() < self.bot.next_wallbuy_scan)
 		return;
 	
-	self.bot.next_wallbuy_scan = gettime() + 180000;
+	self.bot.next_wallbuy_scan = gettime() + 100000;
 	
 	weapontobuy = undefined;
 	
@@ -1135,7 +1140,6 @@ bot_buy_wallbuy()
 		if(distancesquared(wallbuy.origin, self.origin) < 1000000 && 
 		   wallbuy.trigger_stub.cost <= self.score && 
 		   bot_best_gun(wallbuy.trigger_stub.zombie_weapon_upgrade, weapon) && 
-		   findpath(self.origin, wallbuy.origin, undefined, 0, 1) && 
 		   weapon != wallbuy.trigger_stub.zombie_weapon_upgrade && 
 		   !is_offhand_weapon(wallbuy.trigger_stub.zombie_weapon_upgrade))
 		{
@@ -1148,13 +1152,6 @@ bot_buy_wallbuy()
 			if(!isdefined(wallbuy.trigger_stub.zombie_weapon_upgrade))
 				return;
 			
-			if(!findpath(self.origin, wallbuy.origin, undefined, 0, 1))
-			{
-				self cancelgoal("weaponbuy");
-				
-				return;
-			}
-			
 			weapontobuy = wallbuy;
 			
 			break;
@@ -1163,6 +1160,15 @@ bot_buy_wallbuy()
 	
 	if(!isdefined(weapontobuy))
 		return;
+	
+	has_path = findpath(self.origin, weapontobuy.origin, undefined, 0, 1);
+	
+	if(!has_path)
+	{
+		self bot_wallbuy_purchase(weapontobuy);
+		
+		return;
+	}
 	
 	if(isdefined(self.bot.wallbuy_nav_expiry) && gettime() < self.bot.wallbuy_nav_expiry)
 		return;
@@ -1215,7 +1221,7 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 			return;
 		}
 		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			self cancelgoal("weaponbuy");
 			
@@ -1225,6 +1231,11 @@ bot_navigate_and_buy_wallbuy(weapontobuy)
 	
 	self cancelgoal("weaponbuy");
 	
+	self bot_wallbuy_purchase(weapontobuy);
+}
+
+bot_wallbuy_purchase(weapontobuy)
+{
 	weapon = self getcurrentweapon();
 	
 	if(weapon == "none")
@@ -1287,7 +1298,7 @@ bot_pap_guns()
 			return;
 		}
 		
-		if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
+		if(is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 			return;
 		
 		machines = get_cached_vending_machines();
@@ -1878,12 +1889,6 @@ bot_simulate_revive(teammate)
     level thread bot_revive_cleanup_watcher(self, teammate);
     
     self cancelgoal("revive");
-	
-    if(self getgoal("flee") || self hasgoal("flee"))
-        self cancelgoal("flee");
-	
-    if(self getgoal("wander") || self hasgoal("wander"))
-        self cancelgoal("wander");
     
     self lookat(teammate.origin);
     
@@ -1894,12 +1899,6 @@ bot_simulate_revive(teammate)
 		
         self bot_clear_enemy();
 		
-        if(self getgoal("flee") || self hasgoal("flee"))
-            self cancelgoal("flee");
-		
-        if(self getgoal("wander") || self hasgoal("wander"))
-            self cancelgoal("wander");
-	
         if(distancesquared(self.origin, teammate.origin) > 10000)
             break;
         
@@ -2070,23 +2069,11 @@ bot_simulate_self_revive(corpse)
 
     self cancelgoal("selfrevive");
 	
-    if(self getgoal("flee") || self hasgoal("flee"))
-        self cancelgoal("flee");
-	
-    if(self getgoal("wander") || self hasgoal("wander"))
-        self cancelgoal("wander");
-	
     self lookat(corpse.origin);
 
     while(is_true(self.afterlife) && isdefined(self.e_afterlife_corpse) && self.e_afterlife_corpse == corpse)
     {
         self bot_clear_enemy();
-
-        if(self getgoal("flee") || self hasgoal("flee"))
-            self cancelgoal("flee");
-
-        if(self getgoal("wander") || self hasgoal("wander"))
-            self cancelgoal("wander");
 
         if(distancesquared(self.origin, corpse.origin) > 10000)
             break;
@@ -2281,7 +2268,7 @@ bot_update_wander()
 			continue;
 		}
 		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
+        if(is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
@@ -2292,16 +2279,6 @@ bot_update_wander()
 		}
 		
 		if(self getgoal("flee") || self hasgoal("flee"))
-		{
-			if(self getgoal("wander") || self hasgoal("wander"))
-				self cancelgoal("wander");
-			
-			wait 0.05;
-			
-			continue;
-		}
-		
-		if(self getgoal("boxbuy") || self hasgoal("boxbuy"))
 		{
 			if(self getgoal("wander") || self hasgoal("wander"))
 				self cancelgoal("wander");
@@ -2384,7 +2361,7 @@ bot_update_wander()
 		
 		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
 		{
-			if(level.bot_command_mode == "stay" && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			if(level.bot_command_mode == "stay" && isdefined(level.bot_commander))
 			{
 				if(!isdefined(self.bot.stay_pos))
 					self.bot.stay_pos = self.origin;
@@ -2404,7 +2381,7 @@ bot_update_wander()
 		
 		if(isdefined(level.bot_command_mode) && level.bot_command_mode != "wander")
 		{
-			if(level.bot_command_mode == "follow" && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			if(level.bot_command_mode == "follow" && isdefined(level.bot_commander))
 			{
 				if(isdefined(player))
 				{
@@ -2426,9 +2403,9 @@ bot_update_wander()
 						else
 							self.bot.is_following = true;
 						
-						self addgoal(player.origin, 100, 1, "wander");
+						self addgoal(player.origin, 75, 1, "wander");
 						
-						if(dist_sq < 10000)
+						if(dist_sq < 5625)
 						{
 							self.bot.is_following = false;
 							
@@ -2445,7 +2422,7 @@ bot_update_wander()
 		
 		if(isdefined(level.bot_command_mode) && (level.bot_command_mode == "wander" || level.bot_command_mode == "wander_further"))
 		{
-			if((level.bot_command_mode == "wander" || level.bot_command_mode == "wander_further") && isdefined(level.bot_commander) && isalive(level.bot_commander))
+			if((level.bot_command_mode == "wander" || level.bot_command_mode == "wander_further") && isdefined(level.bot_commander))
 			{
 				if(!isdefined(self.bot.last_wander_pos))
 				{
@@ -2521,13 +2498,13 @@ wander_further_get_wander_location(origin, range, player)
 		x = origin[0] + randomintrange(range * -1, range);
 		y = origin[1] + randomintrange(range * -1, range);
 		
-		trace_start = (x, y, origin[2] + 500);
+		trace_start = (x, y, origin[2] + 1000);
 		
-		trace_end = (x, y, origin[2] - 500);
+		trace_end = (x, y, origin[2] - 1000);
 		
 		ground_trace = bullettrace(trace_start, trace_end, 0, undefined);
 		
-		current_min_dist_sq = min_dist_sq * (1 - (tries / 1000));
+		current_min_dist_sq = min_dist_sq * (1 - (tries / 15));
 		
 		candidate = ground_trace["position"];
 		
@@ -2551,7 +2528,7 @@ wander_further_get_wander_location(origin, range, player)
 			}
 		}
 		
-		if(tries >= 1000)
+		if(tries >= 15)
 		{
 			if(skipped_cooldown)
 				player.bot.wander_visited = [];
@@ -2750,7 +2727,7 @@ bot_give_shield()
 		wait 0.05;
 	}
 	
-	while(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_meleeing))
+	while(is_true(self.bot.is_meleeing) || is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 	{
 		wait 0.05;
 	}
@@ -2774,19 +2751,19 @@ bot_give_shield()
 			current_weapon = primaries[0];
 	}
 	
-	if(getdvar("mapname") == "zm_tomb")
+	if(getdvar("mapname") == "zm_transit")
 	{
-		if(self hasweapon("tomb_shield_zm"))
-			self takeweapon("tomb_shield_zm");
+		if(self hasweapon("riotshield_zm"))
+			self takeweapon("riotshield_zm");
 		
-		self giveweapon("tomb_shield_zm");
+		self giveweapon("riotshield_zm");
 		
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
 		self pressads(0);
 		
-		self switchtoweapon("tomb_shield_zm");
+		self switchtoweapon("riotshield_zm");
 		
 		switch_timeout = gettime() + 1000;
 		
@@ -2795,7 +2772,7 @@ bot_give_shield()
 		
 		wait 0.75;
 		
-		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
+		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
 		{
 			self allowattack(0);
 			self pressads(0);
@@ -2844,19 +2821,19 @@ bot_give_shield()
 		}
 	}
 	
-	if(getdvar("mapname") == "zm_transit")
+	if(getdvar("mapname") == "zm_tomb")
 	{
-		if(self hasweapon("riotshield_zm"))
-			self takeweapon("riotshield_zm");
+		if(self hasweapon("tomb_shield_zm"))
+			self takeweapon("tomb_shield_zm");
 		
-		self giveweapon("riotshield_zm");
+		self giveweapon("tomb_shield_zm");
 		
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
 		self pressads(0);
 		
-		self switchtoweapon("riotshield_zm");
+		self switchtoweapon("tomb_shield_zm");
 		
 		switch_timeout = gettime() + 1000;
 		
@@ -2865,7 +2842,7 @@ bot_give_shield()
 		
 		wait 0.75;
 		
-		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
+		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
 		{
 			self allowattack(0);
 			self pressads(0);
@@ -2917,7 +2894,7 @@ bot_weapon_switch_think()
 			continue;
 		}
 		
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_meleeing) || is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			wait 0.05;
 			
@@ -2957,7 +2934,7 @@ bot_weapon_switch_think()
 			
             self switchtoweapon(weapon);
 			
-            self.bot.next_weapon_switch = gettime() + randomintrange(45000, 90000);
+            self.bot.next_weapon_switch = gettime() + randomintrange(30000, 90000);
         }
     }
 }
@@ -3020,7 +2997,7 @@ bot_weapon_failsafe_monitor()
 			continue;
 		}
         
-        if(is_true(self.bot.is_using_box) || is_true(self.bot.is_buying) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving) || is_true(self.bot.is_throwing_grenade))
+        if(is_true(self.bot.is_meleeing) || is_true(self.bot.is_throwing_grenade) || is_true(self.bot.is_buying) || is_true(self.bot.is_using_box) || is_true(self.bot.is_reviving) || is_true(self.bot.is_selfreviving))
 		{
 			wait 0.05;
 			
