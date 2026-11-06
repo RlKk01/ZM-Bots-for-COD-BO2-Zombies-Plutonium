@@ -709,6 +709,7 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "m32") || 
 	   
 	   issubstr(weapon, "870mcs") || 
+	   
 	   issubstr(weapon, "barretm82") || 
 	   issubstr(weapon, "as50"))
 	   
