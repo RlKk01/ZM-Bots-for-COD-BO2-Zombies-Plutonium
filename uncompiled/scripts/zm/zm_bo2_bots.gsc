@@ -665,14 +665,14 @@ bot_get_weapon_score(weapon)
 	if(issubstr(weapon, "galil") || 
 	   issubstr(weapon, "scar"))
 	
-	   return 96;
+	   return 94;
 	
 	if(issubstr(weapon, "mp44") || 
 	   issubstr(weapon, "ak47") || 
 	   issubstr(weapon, "an94") || 
 	   issubstr(weapon, "hk416"))
 	
-	   return 95;
+	   return 93;
 	
     if(issubstr(weapon, "thompson") || 
 	   issubstr(weapon, "ak74u_extclip") || 
@@ -702,13 +702,15 @@ bot_get_weapon_score(weapon)
 	   issubstr(weapon, "fivesevendw") || 
 	   issubstr(weapon, "python"))
 	   
-	   return 75;
+	   return 77;
 	
 	if(issubstr(weapon, "ballistic") || 
 	   
 	   issubstr(weapon, "m32") || 
 	   
-	   issubstr(weapon, "870mcs"))
+	   issubstr(weapon, "870mcs") || 
+	   issubstr(weapon, "barretm82") || 
+	   issubstr(weapon, "as50"))
 	   
 	   return 60;
 	
@@ -718,8 +720,6 @@ bot_get_weapon_score(weapon)
 	   
 	   issubstr(weapon, "rottweil72") || 
 	   
-	   issubstr(weapon, "barretm82") || 
-	   issubstr(weapon, "as50") || 
 	   issubstr(weapon, "ballista") || 
 	   issubstr(weapon, "dsr50") || 
 	   issubstr(weapon, "metalstorm"))
@@ -729,9 +729,10 @@ bot_get_weapon_score(weapon)
     switch(weaponclass(weapon))
     {
 		default:
+			return 100;
 		case "mg":
 		case "spread":
-			return 90;
+			return 95;
 		case "rifle":
 			return 80;
 		case "smg":
@@ -1301,14 +1302,14 @@ bot_buy_wallbuy()
 		self.bot.next_wallbuy_scan = gettime() + 100000;
 	}
 	
+	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
+	
 	weapontobuy = undefined;
 	
 	if(!isdefined(level._spawned_wallbuys) || level._spawned_wallbuys.size == 0)
 		return;
 	
 	wallbuys = array_randomize(level._spawned_wallbuys);
-	
-	upgrade_name = maps\mp\zombies\_zm_weapons::get_upgrade_weapon(weapon);
 	
 	foreach(wallbuy in wallbuys)
 	{
@@ -1442,10 +1443,12 @@ bot_wallbuy_purchase(weapontobuy)
 	
 	if(isdefined(weapons))
 	{
-		if(self hasperk("specialty_additionalprimaryweapon") && weapons.size >= 3)
-			self takeweapon(weapon);
-		
-		if(weapons.size >= 2)
+		if(self hasperk("specialty_additionalprimaryweapon"))
+		{
+			if(weapons.size >= 3)
+				self takeweapon(weapon);
+		}
+		else if(weapons.size >= 2)
 			self takeweapon(weapon);
 	}
 	
@@ -1522,14 +1525,12 @@ bot_pap_guns()
 			return;
 		}
 		
-		dist_sq = distancesquared(self.origin, pack.origin);
-		
 		if((getdvar("g_gametype") == "zstandard") || (isdefined(level.scr_zm_ui_gametype_group) && level.scr_zm_ui_gametype_group == "zsurvival"))
 			detection_dist_sq = 1000000;
 		else
 			detection_dist_sq = 999999999;
 		
-		interaction_dist_sq = 10000;
+		dist_sq = distancesquared(self.origin, pack.origin);
 		
 		if(dist_sq >= detection_dist_sq)
 		{
@@ -1547,6 +1548,8 @@ bot_pap_guns()
 			
 			return;
 		}
+		
+		interaction_dist_sq = 10000;
 		
 		if(dist_sq > interaction_dist_sq)
 		{
@@ -1613,10 +1616,6 @@ bot_buy_perks()
 		
 		if(level.round_number >= 8)
 		{
-			perks = array("specialty_quickrevive", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_additionalprimaryweapon", "specialty_grenadepulldeath");
-			
-			costs = array(1500, 2000, 2500, 3000, 4000, 2000);
-			
 			machines = get_cached_vending_machines();
 			
 			nearby_machines = [];
@@ -1628,6 +1627,10 @@ bot_buy_perks()
 					nearby_machines[nearby_machines.size] = machine;
 				}
 			}
+			
+			perks = array("specialty_quickrevive", "specialty_longersprint", "specialty_movefaster", "specialty_nomotionsensor", "specialty_additionalprimaryweapon", "specialty_grenadepulldeath");
+			
+			costs = array(1500, 2000, 2500, 3000, 4000, 2000);
 			
 			foreach(machine in nearby_machines)
 			{
@@ -1787,6 +1790,9 @@ bot_clear_debris()
 		
         if(!isdefined(pile.origin))
             continue;
+		
+		if(!isdefined(pile.target))
+			continue;
         
         if(isdefined(pile._door_open) && pile._door_open)
             continue;
@@ -1795,9 +1801,6 @@ bot_clear_debris()
             continue;
 		
 		if(!isdefined(pile.zombie_cost) || pile.zombie_cost <= 0)
-			continue;
-		
-		if(!isdefined(pile.target))
 			continue;
         
         if(self.score < pile.zombie_cost)
@@ -3370,6 +3373,9 @@ bot_get_closest_enemy(origin)
 
 bot_update_lookat()
 {
+	if(isdefined(self.bot.threat.entity))
+		return;
+	
 	path = 0;
 	
 	if(isdefined(self getlookaheaddir()))

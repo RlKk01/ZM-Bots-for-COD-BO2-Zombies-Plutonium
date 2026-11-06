@@ -331,8 +331,6 @@ bot_combat_main()
 	
 	ads = 0;
 	
-	time = gettime();
-	
 	if(!self bot_should_hip_fire() && self.bot.threat.dot > 0.96)
 	{
 		ads = 1;
@@ -346,6 +344,8 @@ bot_combat_main()
 	{
 		self pressads(0);
 	}
+	
+	time = gettime();
 	
 	frames = 4;
 	
@@ -581,8 +581,6 @@ bot_combat_throw_grenade()
 
 bot_should_hip_fire()
 {
-	enemy = self.bot.threat.entity;
-	
 	weapon = self getcurrentweapon();
 	
 	if(weapon == "none")
@@ -595,14 +593,14 @@ bot_should_hip_fire()
 		return 1;
 	}
 	
+	enemy = self.bot.threat.entity;
+	
 	class = weaponclass(weapon);
 	
 	if(isplayer(enemy) && class == "spread")
 	{
 		return 1;
 	}
-	
-	distsq = distancesquared(self.origin, enemy.origin);
 	
 	distcheck = 0;
 	
@@ -635,6 +633,8 @@ bot_should_hip_fire()
 	{
 		distcheck = 400;
 	}
+	
+	distsq = distancesquared(self.origin, enemy.origin);
 	
 	return distsq < (distcheck * distcheck);
 }
@@ -795,8 +795,6 @@ bot_best_enemy()
     }
     
     wallshoot_range = getdvarfloatdefault("bot_wallshoot_dist", 200);
-	
-	switch_objective = 150;
     
     revive_point = undefined;
     
@@ -856,6 +854,8 @@ bot_best_enemy()
 		
         return 0;
     }
+	
+	switch_objective = 150;
 	
     if(isdefined(current_score) && best != current && (best_score - current_score) < switch_objective)
         best = current;
