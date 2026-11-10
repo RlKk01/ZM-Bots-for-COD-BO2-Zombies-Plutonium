@@ -18,7 +18,7 @@ The most relevant characteristics that these bots have are:
 
 * Bots will get the shield if the player has it.
 
-* Bots will knife zombies if they're at one hit to get killed, or if an Insta-Kill power-up is active.
+* Bots will knife zombies if they're at one hit to get killed, or if an insta-kill power-up is active.
 
 * Bots will throw grenades at the zombies if there is a group of them within an small radius.
 
