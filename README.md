@@ -1,4 +1,4 @@
-To install this mod, press «Win + R» and paste the following path: «%localappdata%\Plutonium\storage\t6», then press Enter.
+To install this mod, press «Win + R» and paste the following path: «%localappdata%\Plutonium\storage\t6», then press «Enter».
 
 Then, move the "zm_bots" folder to the "mods" folder; if you don't have the "mods" folder, just create it.
 
@@ -10,7 +10,7 @@ The most relevant characteristics that these bots have are:
 
 * They will purchase doors, clear debris, buy wall-guns, buy perks or pap their weapons on a determined radius.
 
-* They smartly use the Mystery Box, following a weapon tier list to prioritize which guns they take. They will also acknowledge when a fire sale is active.
+* They smartly use the mystery box, following a weapon tier list to prioritize which guns they take. They will also acknowledge when a fire sale is active.
 
 * A pickup «power-up» function with a smart check to avoid picking up the nuke if there are zombies left, or the double points / insta-kill if there are no zombies left in the round (bots can accidentally bump into the powerup under certain conditions).
 
