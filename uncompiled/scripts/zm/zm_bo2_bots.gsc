@@ -1,16 +1,15 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
+
 #include maps\mp\zombies\_zm;
 #include maps\mp\zombies\_zm_utility;
 #include maps\mp\zombies\_zm_stats;
 #include maps\mp\zombies\_zm_score;
 #include maps\mp\zombies\_zm_perks;
 #include maps\mp\zombies\_zm_weapons;
-#include maps\mp\zombies\_zm_equipment;
 #include maps\mp\zombies\_zm_powerups;
 #include maps\mp\zombies\_zm_blockers;
 #include maps\mp\zombies\_zm_laststand;
-#include maps\mp\zombies\_zm_afterlife;
 
 #include scripts\zm\zm_bo2_bots_combat;
 
@@ -22,6 +21,7 @@ main()
 track_players_intersection_tracker()
 {
     self endon("disconnect");
+	
     self endon("death");
 	
     level endon("end_game");
@@ -75,10 +75,15 @@ track_players_intersection_tracker()
                     players[i] playlocalsound(level.zmb_laugh_alias);
 
                 players[i] maps\mp\zombies\_zm_stats::increment_map_cheat_stat("cheat_too_friendly");
+				
                 players[i] maps\mp\zombies\_zm_stats::increment_client_stat("cheat_too_friendly", 0);
+				
                 players[i] maps\mp\zombies\_zm_stats::increment_client_stat("cheat_total", 0);
+				
                 players[j] maps\mp\zombies\_zm_stats::increment_map_cheat_stat("cheat_too_friendly");
+				
                 players[j] maps\mp\zombies\_zm_stats::increment_client_stat("cheat_too_friendly", 0);
+				
                 players[j] maps\mp\zombies\_zm_stats::increment_client_stat("cheat_total", 0);
 				
                 killed_players = 1;
@@ -98,27 +103,35 @@ botaction(stance)
     switch(stance)
     {
         case bot_action_stand:
+			
             self allowstand(true);
             self allowcrouch(false);
             self allowprone(false);
+			
             break;
         
         case bot_action_crouch:
+			
             self allowstand(false);
             self allowcrouch(true);
             self allowprone(false);
+			
             break;
             
         case bot_action_prone:
+			
             self allowstand(false);
             self allowcrouch(false);
             self allowprone(true);
+			
             break;
             
         default:
+			
             self allowstand(true);
             self allowcrouch(true);
             self allowprone(true);
+			
             break;
     }
 }
@@ -143,8 +156,11 @@ init()
     level.box_in_use_by_bot = undefined;
 	
 	init_zombie_cache();
+	
     init_vending_cache();
+	
     init_door_cache();
+	
     init_debris_cache();
 	
 	bot_amount = getdvarintdefault("zm_bots", 7);
@@ -159,6 +175,7 @@ init()
         if(!isdefined(player.pers["isbot"]))
         {
             player thread manual_bot_teleport_monitor();
+			
             player thread bot_command_mode_monitor();
         }
     }
@@ -199,8 +216,12 @@ onspawn()
 		self notify("bot_relife");
 		
 		self thread bot_spawn();
+		
 		self thread bot_health();
+		
 		self thread bot_set_perks();
+		
+		self thread bot_block_jugg_permaperk();
 	}
 }
 
@@ -219,26 +240,30 @@ bot_spawn()
 	self bot_spawn_init();
 	
 	self thread bot_main();
+	
 	self thread bot_shield_sync_think();
+	
 	self thread bot_weapon_switch_think();
+	
 	self thread bot_weapon_failsafe_monitor();
 }
 
 bot_health()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
 	
 	wait 1;
 	
+	max_health = 250;
+	
 	while(1)
 	{
-		max_health = 250;
-		
-		self setnormalhealth(max_health);
 		self setmaxhealth(max_health);
 		
 		self waittill("player_revived");
@@ -251,21 +276,25 @@ bot_health_regen()
 	
 	for(;;)
 	{
-		players = getplayers();
+		players = get_players();
 		
 		for(i = 0; i < players.size; i++)
 		{
-			if(!isdefined(players[i]) || !isalive(players[i]))
+			player = players[i];
+			
+			if(!isdefined(player) || !isalive(player))
 				continue;
 			
-			if(!isdefined(players[i].pers["isbot"]))
+			if(!isdefined(player.pers["isbot"]))
 				continue;
 			
-            if(players[i].health < 250)
-                players[i].health += 50;
-			
-            if(players[i].health > 250)
-                players[i].health = 250;
+            if(player.health < player.maxhealth)
+			{
+                player.health += 50;
+				
+				if(player.health > player.maxhealth)
+					player.health = player.maxhealth;
+			}
 		}
 		
 		wait 0.5;
@@ -275,7 +304,9 @@ bot_health_regen()
 bot_set_perks()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -284,12 +315,33 @@ bot_set_perks()
 	
 	while(1)
 	{
+		self setperk("specialty_flakjacket");
+		self setperk("specialty_fastreload");
 		self setperk("specialty_rof");
 		self setperk("specialty_deadshot");
-		self setperk("specialty_fastreload");
-		self setperk("specialty_flakjacket");
 		
 		self waittill("player_revived");
+	}
+}
+
+bot_block_jugg_permaperk()
+{
+	self endon("disconnect");
+	
+	self endon("bot_relife");
+	
+	self endon("death");
+	
+	level endon("end_game");
+	
+	jugg_permaperk_stat = strtok("pers_jugg, pers_jugg_downgrade_count", ",");
+	
+	for(;;)
+	{
+		for(i = 0; i < jugg_permaperk_stat.size; i++)
+			self maps\mp\zombies\_zm_stats::zero_client_stat(jugg_permaperk_stat[i], 0);
+		
+		wait 0.25;
 	}
 }
 
@@ -437,10 +489,6 @@ bot_set_dvars()
 	setdvar("bot_maxadstime", "5000");
 	setdvar("bot_minfiretime", "100");
 	setdvar("bot_maxfiretime", "250");
-	setdvar("bot_mindeathtime", "250");
-	setdvar("bot_maxdeathtime", "500");
-	setdvar("bot_mincrouchtime", "100");
-	setdvar("bot_maxcrouchtime", "400");
 }
 
 bot_spawn_init()
@@ -455,31 +503,50 @@ bot_spawn_init()
 	}
 	
 	self.bot.stay_pos = undefined;
+	
 	self.bot.is_meleeing = undefined;
+	
 	self.bot.is_getting_shield = undefined;
+	
 	self.bot.is_throwing_grenade = undefined;
+	
+	self.bot.is_buying = undefined;
+	
 	self.bot.update_idle_lookat = time + randomintrange(1000, 3000);
+	
 	self.bot.think_interval = 0.1;
+	
 	self.bot.threat.entity = undefined;
+	
 	self.bot.threat.position = (0, 0, 0);
+	
 	self.bot.threat.time_first_sight = 0;
+	
 	self.bot.threat.time_recent_sight = 0;
+	
 	self.bot.threat.time_aim_interval = 0;
+	
 	self.bot.threat.time_aim_correct = 0;
 }
 
 bot_main()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
 
 	self thread bot_wakeup_think();
+	
 	self thread bot_damage_think();
+	
 	self thread bot_give_ammo();
+	
 	self thread bot_reset_flee_goal();
+	
 	self thread bot_update_wander();
 	
 	for(;;)
@@ -505,24 +572,31 @@ bot_main()
 		}
 		
 		self bot_update_lookat();
+		
 		self bot_stand_fix();
 		
 		if(is_true(level.using_bot_weapon_logic))
 		{
             self bot_buy_wallbuy();
+			
 			self bot_pap_guns();
+			
 			self bot_buy_perks();
 		}
 		
 		if(is_true(level.using_bot_revive_logic))
 		{
 			self bot_revive_teammates();
+			
 			self bot_self_revive_afterlife();
 		}
 		
 		self bot_pickup_powerup();
+		
 		self bot_buy_box();
+		
 		self bot_buy_door();
+		
 		self bot_clear_debris();
 		
 		wait 0.05;
@@ -626,22 +700,18 @@ bot_get_weapon_score(weapon)
     if(!isdefined(weapon) || weapon == "none")
 		return 0;
     
-	if(issubstr(weapon, "ray_gun") || 
-	   issubstr(weapon, "mark2") || 
-	   issubstr(weapon, "freezegun") || 
-	   issubstr(weapon, "tesla") || 
+	if(issubstr(weapon, "tesla") || 
 	   issubstr(weapon, "thunder") || 
-	   issubstr(weapon, "slipgun") || 
-	   issubstr(weapon, "slowgun") || 
+	   issubstr(weapon, "freeze") || 
+	   issubstr(weapon, "staff") || 
 	   issubstr(weapon, "blunder") || 
-	   issubstr(weapon, "staff"))
+	   issubstr(weapon, "slowgun") || 
+	   issubstr(weapon, "slipgun") || 
+	   issubstr(weapon, "ray"))
 	
 	   return 100;
 		
-	if(issubstr(weapon, "minigun") || 
-	   issubstr(weapon, "titus") || 
-	   
-	   issubstr(weapon, "srm1216") || 
+	if(issubstr(weapon, "srm1216") || 
 	   issubstr(weapon, "saiga12") || 
 	   
 	   issubstr(weapon, "c96_upgraded") || 
@@ -650,17 +720,25 @@ bot_get_weapon_score(weapon)
 	   
 	   return 99;
 	
+	if(issubstr(weapon, "titus"))
+		return 98;
+	
 	if(issubstr(weapon, "mg08") || 
-	   issubstr(weapon, "hamr") || 
 	   issubstr(weapon, "lsat") || 
 	   issubstr(weapon, "qbb95"))
 	
-	   return 98;
+	   return 97;	
+	
+	if(issubstr(weapon, "minigun") || 
+	   
+	   issubstr(weapon, "hamr"))
+	
+	   return 96;
 	
 	if(issubstr(weapon, "rpd") || 
 	   issubstr(weapon, "mk48"))
 	
-	   return 97;
+	   return 95;
     
 	if(issubstr(weapon, "galil") || 
 	   issubstr(weapon, "scar"))
@@ -699,7 +777,7 @@ bot_get_weapon_score(weapon)
 	   
 	   issubstr(weapon, "mp40_stalker") || 
 	   
-	   issubstr(weapon, "fivesevendw") || 
+	   issubstr(weapon, "dw") || 
 	   issubstr(weapon, "python"))
 	   
 	   return 77;
@@ -731,15 +809,22 @@ bot_get_weapon_score(weapon)
     {
 		default:
 			return 100;
-		case "mg":
+		
 		case "spread":
+			return 99;
+		
+		case "mg":
 			return 95;
+		
 		case "rifle":
 			return 80;
+		
 		case "smg":
 			return 70;
+		
 		case "rocketlauncher":
 			return 60;
+		
 		case "pistol":
 			return 50;
     }
@@ -838,8 +923,11 @@ bot_buy_box()
         if((!isdefined(self.bot.box_payment_time) || (gettime() - self.bot.box_payment_time > 10000)))
         {
             self.bot.waiting_for_box_animation = undefined;
+			
             self.bot.current_box = undefined;
+			
             self.bot.is_using_box = undefined;
+			
             self.bot.is_grabbing_box = undefined;
 
             if(level.box_in_use_by_bot == self)
@@ -942,7 +1030,9 @@ bot_buy_box()
             }
 
             self.bot.current_box = current_box;
+			
             self.bot.is_using_box = true;
+			
             current_box.chest_user = self;
 			
             if(!fire_sale)
@@ -978,6 +1068,7 @@ bot_buy_box()
 bot_monitor_box_animation(box)
 {
     self endon("disconnect");
+	
     self endon("death");
 	
 	level endon("end_game");
@@ -996,6 +1087,7 @@ bot_monitor_box_animation(box)
 			box.chest_user = undefined;
 		
         self.bot.current_box = undefined;
+		
         self.bot.is_using_box = undefined;
 		
         if(level.box_in_use_by_bot == self)
@@ -1021,6 +1113,7 @@ bot_monitor_box_animation(box)
 			box.chest_user = undefined;
             
         self.bot.current_box = undefined;
+		
         self.bot.is_using_box = undefined;
 		
         if(level.box_in_use_by_bot == self)
@@ -1081,6 +1174,7 @@ bot_monitor_box_animation(box)
 		self.bot.is_grabbing_box = true;
 		
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		wait 0.25;
@@ -1094,6 +1188,7 @@ bot_monitor_box_animation(box)
                 if(isdefined(box.unitrigger_stub) && isdefined(box.unitrigger_stub.trigger))
 				{
 					self allowattack(0);
+					
 					self pressads(0);
 					
                     box.unitrigger_stub.trigger notify("trigger", self);
@@ -1101,6 +1196,7 @@ bot_monitor_box_animation(box)
                 else if(isdefined(box.use_trigger))
 				{
 					self allowattack(0);
+					
 					self pressads(0);
 					
                     box.use_trigger notify("trigger", self);
@@ -1108,6 +1204,7 @@ bot_monitor_box_animation(box)
 				else
 				{
 					self allowattack(0);
+					
 					self pressads(0);
 					
 					box notify("trigger", self);
@@ -1145,6 +1242,7 @@ bot_monitor_box_animation(box)
 	self clearlookat();
 	
 	self.bot.current_box = undefined;
+	
 	self.bot.is_using_box = undefined;
     
     if(isdefined(box.chest_user) && box.chest_user == self)
@@ -1156,23 +1254,26 @@ bot_monitor_box_animation(box)
     self notify("box_usage_complete");
 }
 
-bot_box_cleanup_watcher(zm_bots, box)
+bot_box_cleanup_watcher(bot_box, box)
 {
 	level endon("end_game");
 	
-    zm_bots endon("box_usage_complete");
+    bot_box endon("box_usage_complete");
 	
-    zm_bots waittill_any("death", "disconnect");
+    bot_box waittill_any("death", "disconnect");
 	
-	zm_bots.bot.waiting_for_box_animation = undefined;
-	zm_bots.bot.current_box = undefined;
-    zm_bots.bot.is_using_box = undefined;
-	zm_bots.bot.is_grabbing_box = undefined;
+	bot_box.bot.waiting_for_box_animation = undefined;
 	
-    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == zm_bots)
+	bot_box.bot.current_box = undefined;
+	
+    bot_box.bot.is_using_box = undefined;
+	
+	bot_box.bot.is_grabbing_box = undefined;
+	
+    if(isdefined(box) && isdefined(box.chest_user) && box.chest_user == bot_box)
         box.chest_user = undefined;
 	
-    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == zm_bots)
+    if(isdefined(level.box_in_use_by_bot) && level.box_in_use_by_bot == bot_box)
         level.box_in_use_by_bot = undefined;
 }
 
@@ -1261,6 +1362,7 @@ bot_should_take_weapon(boxweapon, currentweapon)
 bot_buy_wallbuy()
 {
 	self endon("disconnect");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -1288,7 +1390,7 @@ bot_buy_wallbuy()
         return;
     }
 	
-	if(bot_get_weapon_score(weapon) <= 60)
+	if(bot_get_weapon_score(weapon) <= 70)
 	{
 		if(isdefined(self.bot.next_weak_wallbuy_scan) && gettime() < self.bot.next_weak_wallbuy_scan)
 			return;
@@ -1362,6 +1464,7 @@ bot_buy_wallbuy()
 bot_navigate_and_buy_wallbuy(weapontobuy)
 {
 	self endon("disconnect");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -1436,6 +1539,7 @@ bot_wallbuy_purchase(weapontobuy)
 	self.bot.is_buying = true;
 	
 	self allowattack(0);
+	
 	self pressads(0);
 	
 	self maps\mp\zombies\_zm_score::minus_to_player_score(weapontobuy.trigger_stub.cost);
@@ -1454,7 +1558,9 @@ bot_wallbuy_purchase(weapontobuy)
 	}
 	
 	self giveweapon(weapontobuy.trigger_stub.zombie_weapon_upgrade);
+	
 	self switchtoweapon(weapontobuy.trigger_stub.zombie_weapon_upgrade);
+	
 	self setspawnweapon(weapontobuy.trigger_stub.zombie_weapon_upgrade);
 	
 	self.bot.is_buying = undefined;
@@ -1576,13 +1682,17 @@ bot_pap_gun(weapon, upgrade_name)
 	self.bot.is_buying = true;
 	
 	self allowattack(0);
+	
 	self pressads(0);
 	
 	self maps\mp\zombies\_zm_score::minus_to_player_score(5000);
 	
 	self takeweapon(weapon);
+	
 	self giveweapon(upgrade_name, 0, self maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options(upgrade_name));
+	
 	self switchtoweapon(upgrade_name);
+	
 	self setspawnweapon(upgrade_name);
 	
 	self.bot.is_buying = undefined;
@@ -2056,6 +2166,7 @@ bot_revive_teammates()
 bot_simulate_revive(teammate)
 {
     self endon("disconnect");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -2083,6 +2194,7 @@ bot_simulate_revive(teammate)
     while(isdefined(teammate) && teammate maps\mp\zombies\_zm_laststand::player_is_in_laststand() && !self maps\mp\zombies\_zm_laststand::player_is_in_laststand())
     {
         self allowattack(0);
+		
 		self pressads(0);
 		
         self bot_clear_enemy();
@@ -2250,6 +2362,7 @@ bot_self_revive_afterlife()
 bot_simulate_self_revive(corpse)
 {
     self endon("disconnect");
+	
     self endon("death");
 
     level endon("end_game");
@@ -2345,6 +2458,7 @@ execute_bot_teleport()
 bot_staggered_teleport(bots_to_teleport, offsets)
 {
 	self endon("disconnect");
+	
     self endon("death");
 	
     level endon("end_game");
@@ -2438,7 +2552,9 @@ bot_cycle_command_mode()
 bot_update_wander()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -2829,7 +2945,9 @@ bot_wander_on_cooldown(pos, timer)
 bot_shield_sync_think()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -2884,6 +3002,7 @@ bot_has_shield()
 bot_give_shield()
 {
 	self endon("disconnect");
+	
 	self endon("death");
 	
 	if(is_true(self.bot.is_getting_shield))
@@ -2953,6 +3072,7 @@ bot_give_shield()
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		self switchtoweapon("riotshield_zm");
@@ -2967,6 +3087,7 @@ bot_give_shield()
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "riotshield_zm")
 		{
 			self allowattack(0);
+			
 			self pressads(0);
 			
 			self switchtoweapon(current_weapon);
@@ -2988,6 +3109,7 @@ bot_give_shield()
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		self switchtoweapon("alcatraz_shield_zm");
@@ -3002,6 +3124,7 @@ bot_give_shield()
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "alcatraz_shield_zm")
 		{
 			self allowattack(0);
+			
 			self pressads(0);
 			
 			self switchtoweapon(current_weapon);
@@ -3023,6 +3146,7 @@ bot_give_shield()
 		self.shielddamagetaken = 0;
 		
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		self switchtoweapon("tomb_shield_zm");
@@ -3037,6 +3161,7 @@ bot_give_shield()
 		if(isdefined(current_weapon) && current_weapon != "none" && current_weapon != "tomb_shield_zm")
 		{
 			self allowattack(0);
+			
 			self pressads(0);
 			
 			self switchtoweapon(current_weapon);
@@ -3054,7 +3179,9 @@ bot_give_shield()
 bot_weapon_switch_think()
 {
     self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
     level endon("end_game");
@@ -3122,11 +3249,12 @@ bot_weapon_switch_think()
         if(isdefined(weapon) && weapon != current)
         {
             self allowattack(0);
+			
             self pressads(0);
 			
             self switchtoweapon(weapon);
 			
-            self.bot.next_weapon_switch = gettime() + randomintrange(30000, 90000);
+            self.bot.next_weapon_switch = gettime() + randomintrange(8000, 100000);
         }
     }
 }
@@ -3159,7 +3287,9 @@ bot_switch_weapon(current_weapon, primaries)
 bot_weapon_failsafe_monitor()
 {
     self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -3230,7 +3360,9 @@ bot_weapon_failsafe_monitor()
 			}
 			
 			self giveweapon(fallback_weapon);
+			
 			self switchtoweapon(fallback_weapon);
+			
 			self setspawnweapon(fallback_weapon);
         }
     }
@@ -3239,7 +3371,9 @@ bot_weapon_failsafe_monitor()
 bot_give_ammo()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -3292,7 +3426,9 @@ array_contains(array, value)
 bot_wakeup_think()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -3314,6 +3450,7 @@ bot_damage_think()
 	self endon("bot_relife");
 	
 	self endon("disconnect");
+	
 	self endon("death");
 	
 	level endon("end_game");
@@ -3331,7 +3468,9 @@ bot_damage_think()
 bot_reset_flee_goal()
 {
 	self endon("disconnect");
+	
 	self endon("bot_relife");
+	
 	self endon("death");
 	
 	level endon("end_game");

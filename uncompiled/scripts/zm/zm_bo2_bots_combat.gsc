@@ -1,5 +1,6 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
+
 #include maps\mp\zombies\_zm_laststand;
 
 #include scripts\zm\zm_bo2_bots;
@@ -9,12 +10,14 @@ bot_combat_think(damage, attacker, direction)
 	if(is_true(self.bot.is_getting_shield) || is_true(self.bot.is_throwing_grenade))
 	{
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		return;
 	}
 	
 	self allowattack(0);
+	
 	self pressads(0);
 	
 	if(!bot_can_do_combat())
@@ -49,6 +52,7 @@ bot_combat_think(damage, attacker, direction)
 	if(!sight && !self bot_has_enemy())
 	{
 		self allowattack(0);
+		
 		self pressads(0);
 		
 		return;
@@ -362,7 +366,9 @@ bot_combat_main()
 		}
 		
 		self.bot.threat.aim_target = self bot_update_aim(frames);
+		
 		self.bot.threat.position = self.bot.threat.entity.origin;
+		
 		self bot_combat_lookat(self.bot.threat.aim_target, frac);
 	}
 	
@@ -463,6 +469,7 @@ bot_should_melee()
 bot_combat_melee()
 {
     self endon("disconnect");
+	
     self endon("death");
 
     if(is_true(self.bot.is_meleeing))
@@ -471,6 +478,7 @@ bot_combat_melee()
     self.bot.is_meleeing = true;
 
     self allowattack(0);
+	
     self pressads(0);
 
     threat = self.bot.threat.entity;
@@ -545,6 +553,7 @@ bot_should_throw_grenade()
 bot_combat_throw_grenade()
 {
     self endon("disconnect");
+	
     self endon("death");
 
     if(is_true(self.bot.is_throwing_grenade))
@@ -607,25 +616,45 @@ bot_should_hip_fire()
 	switch(class)
 	{
 		case "rocketlauncher":
+			
 			distcheck = 0;
+			
 			break;
 		
 		default:
-		case "mg":
-		case "rifle":
+			
 			distcheck = 200;
+			
+			break;
+		
+		case "mg":
+			
+			distcheck = 200;
+			
+			break;
+		
+		case "rifle":
+			
+			distcheck = 200;
+			
 			break;
 		
 		case "spread":
+			
 			distcheck = 250;
+			
 			break;
 		
 		case "smg":
+			
 			distcheck = 400;
+			
 			break;
 		
 		case "pistol":
+			
 			distcheck = 300;
+			
 			break;
 	}
 	
@@ -864,8 +893,11 @@ bot_best_enemy()
         self.bot.threat.time_first_sight = gettime();
     
     self.bot.threat.entity = best;
+	
     self.bot.threat.time_recent_sight = gettime();
+	
     self.bot.threat.dot = bot_dot_product(best.origin);
+	
     self.bot.threat.position = best.origin;
     
     return 1;
